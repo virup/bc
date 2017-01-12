@@ -4,6 +4,9 @@ import battlecode.common.*;
 public strictfp class RobotPlayer {
     static RobotController rc;
 
+    static int GARDENER_CHANNEL = 2;
+    static int MAX_GARDENER = 3;
+
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
      * If this method returns, the robot dies!
@@ -45,9 +48,11 @@ public strictfp class RobotPlayer {
                 // Generate a random direction
                 Direction dir = randomDirection();
 
+                int noOfGardener = rc.readBroadcast(GARDENER_CHANNEL);
                 // Randomly attempt to build a gardener in this direction
-                if (rc.canHireGardener(dir) && Math.random() < .01) {
+                if (rc.canHireGardener(dir) && noOfGardener < MAX_GARDENER) {
                     rc.hireGardener(dir);
+                    rc.broadcast(GARDENER_CHANNEL, noOfGardener + 1);
                 }
 
                 // Move randomly
@@ -82,14 +87,34 @@ public strictfp class RobotPlayer {
                 int yPos = rc.readBroadcast(1);
                 MapLocation archonLoc = new MapLocation(xPos,yPos);
 
+                float myHealth = rc.getHealth();
+                if (myHealth < 20) {
+                    int noOfGardeners = rc.readBroadcast(GARDENER_CHANNEL);
+                    rc.broadcast(GARDENER_CHANNEL, noOfGardeners - 1);
+                }
+
                 // Generate a random direction
                 Direction dir = randomDirection();
 
-                // Randomly attempt to build a soldier or lumberjack in this direction
-                if (rc.canBuildRobot(RobotType.SOLDIER, dir) && Math.random() < .01) {
+                MapLocation curLoc = rc.getLocation();
+                if (rc.canInteractWithTree(curLoc)) {
+                    System.out.println("Found tree!");
+                    TreeInfo treeInfo = rc.senseTreeAtLocation(curLoc);
+                    int treeId = treeInfo.getID();
+                    if (rc.canChop(treeId)) {
+                        rc.chop(treeId);
+                    } else if (rc.canShake(treeId)) {
+                        rc.shake(treeId);
+                    } else {
+                        rc.water(treeId);
+                    }
+                } else if (rc.canBuildRobot(RobotType.SOLDIER, dir) && Math.random() < .01) {
                     rc.buildRobot(RobotType.SOLDIER, dir);
                 } else if (rc.canBuildRobot(RobotType.LUMBERJACK, dir) && Math.random() < .01 && rc.isBuildReady()) {
                     rc.buildRobot(RobotType.LUMBERJACK, dir);
+                } else if (rc.canPlantTree(dir) && rc.hasTreeBuildRequirements()) {
+
+                    rc.plantTree(dir);
                 }
 
                 // Move randomly
