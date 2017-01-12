@@ -91,9 +91,13 @@ public strictfp class RobotPlayer {
                 } else if (rc.canBuildRobot(RobotType.LUMBERJACK, dir) && Math.random() < .01 && rc.isBuildReady()) {
                     rc.buildRobot(RobotType.LUMBERJACK, dir);
                 }
+                else if (rc.canPlantTree(dir)) { // Bytecode cost: 10
+                    // don't want the gardener to be stuck in the space between planted trees
+                    rc.plantTree(randomDirection()); // Bytecode cost 0
+                }
 
                 // Move randomly
-                tryMove(randomDirection());
+                wander();
 
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
@@ -275,5 +279,17 @@ public strictfp class RobotPlayer {
 
         return (perpendicularDist <= rc.getType().bodyRadius);
     }
+
+    public static void wander() throws GameActionException {
+        try {
+            Direction dir = randomDirection();
+            if (rc.canMove(dir)) {
+                rc.move(dir);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 }
 
