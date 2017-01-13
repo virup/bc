@@ -3,6 +3,7 @@ import battlecode.common.*;
 
 public strictfp class RobotPlayer {
     static RobotController rc;
+    static int BULLET_CHANNEL = 100;
 
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
@@ -46,9 +47,20 @@ public strictfp class RobotPlayer {
                 Direction dir = randomDirection();
 
                 // Randomly attempt to build a gardener in this direction
-                if (rc.canHireGardener(dir) && Math.random() < .01) {
+                // if (rc.canHireGardener(dir) && Math.random() < .01) {
+                //    rc.hireGardener(dir);
+                // }
+
+                // hire gardener always, will this be expensive to do ?
+                if (rc.canHireGardener(dir)) {
                     rc.hireGardener(dir);
                 }
+
+                // Dodge bullets
+                // Bullet sensing is different from regular sensing. All units have a bullet
+                // sensing range that is larger than their sight range, meaning bullets
+                // can be sensed at a further distance than the units that fire them.
+
 
                 // Move randomly
                 tryMove(randomDirection());
@@ -60,6 +72,7 @@ public strictfp class RobotPlayer {
 
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
+
 
             } catch (Exception e) {
                 System.out.println("Archon Exception");
@@ -85,15 +98,15 @@ public strictfp class RobotPlayer {
                 // Generate a random direction
                 Direction dir = randomDirection();
 
-                // Randomly attempt to build a soldier or lumberjack in this direction
-                if (rc.canBuildRobot(RobotType.SOLDIER, dir) && Math.random() < .01) {
-                    rc.buildRobot(RobotType.SOLDIER, dir);
-                } else if (rc.canBuildRobot(RobotType.LUMBERJACK, dir) && Math.random() < .01 && rc.isBuildReady()) {
-                    rc.buildRobot(RobotType.LUMBERJACK, dir);
-                }
-                else if (rc.canPlantTree(dir)) { // Bytecode cost: 10
+                MapLocation archonLocX = new MapLocation(xPos,yPos);
+                MapLocation archonLocY = new MapLocation(xPos,yPos);
+
+
+                if (rc.canPlantTree(dir)) { // Bytecode cost: 10
                     // don't want the gardener to be stuck in the space between planted trees
-                    rc.plantTree(randomDirection()); // Bytecode cost 0
+                    rc.plantTree(dir); // Bytecode cost 0
+                    // donate
+                    exchangeBulletsForVPs();
                 }
 
                 // Move randomly
@@ -291,5 +304,47 @@ public strictfp class RobotPlayer {
         }
     }
 
+    public static void checkNearbyBulletsBeforeMoving() throws GameActionException {
+        try {
+            BulletInfo[] bulletArray = rc.senseNearbyBullets();
+            Direction dir = randomDirection();
+            for (BulletInfo b : bulletArray) {
+                if (b.getDir().equals(dir))
+                    dir = randomDirection();
+            }
+
+            if (rc.canMove(dir)) {
+                rc.move(dir);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void exchangeBulletsForVPs() throws GameActionException {
+        try {
+            //int victory_points = rc.getTeamVictoryPoints();
+
+            // broadcast number of bullets in a channel...read it back...
+            // if the number has increased by a certain amount (?)
+            // then donate (how much ?)
+            int prev_bullets = rc.readBroadcast(BULLET_CHANNEL);
+            int current_bullets = (int)rc.getTeamBullets();
+            rc.broadcast(BULLET_CHANNEL, current_bullets);
+
+            // if number of bullets increase by 10%, then donate
+            if (prev_bullets == 0) return;
+            float percentageIncrease = ((current_bullets - prev_bullets) / prev_bullets) * 100;
+            System.out.println("percentageIncrease: " + percentageIncrease);
+
+            if (percentageIncrease > 10.0) {
+                rc.donate(current_bullets-prev_bullets);
+                System.out.println("VP: " + rc.getTeamVictoryPoints());
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }
 
