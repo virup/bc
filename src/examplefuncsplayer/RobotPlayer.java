@@ -42,6 +42,7 @@ public strictfp class RobotPlayer {
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
 
+                /*
                 // Generate a random direction
                 Direction dir = randomDirection();
 
@@ -57,7 +58,7 @@ public strictfp class RobotPlayer {
                 MapLocation myLocation = rc.getLocation();
                 rc.broadcast(0,(int)myLocation.x);
                 rc.broadcast(1,(int)myLocation.y);
-
+                */
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
 

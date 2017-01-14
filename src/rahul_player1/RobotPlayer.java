@@ -4,7 +4,10 @@ import battlecode.common.*;
 public strictfp class RobotPlayer {
     static RobotController rc;
     static int BULLET_CHANNEL = 100;
+    static int ARCHON_X = 0;
+    static int ARCHON_Y = 0;
 
+    static int ARCHON_DIRECTION = 1;
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
      * If this method returns, the robot dies!
@@ -36,39 +39,48 @@ public strictfp class RobotPlayer {
 
     static void runArchon() throws GameActionException {
         System.out.println("I'm an archon!");
-
         // The code you want your robot to perform every round should be in this loop
         while (true) {
 
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
 
+
                 // Generate a random direction
-                Direction dir = randomDirection();
+                // Direction dir = randomDirection();
 
                 // Randomly attempt to build a gardener in this direction
                 // if (rc.canHireGardener(dir) && Math.random() < .01) {
                 //    rc.hireGardener(dir);
                 // }
 
+                /*
                 // hire gardener always, will this be expensive to do ?
                 if (rc.canHireGardener(dir)) {
                     rc.hireGardener(dir);
                 }
+                */
+
+                // printing out useful info to track archon's movement
+                //System.out.println("dir.getAngleDegrees: " + dir.getAngleDegrees());
+                //System.out.println("dir.radians: " + dir.radians);
+                //System.out.println("dir.opposite().getAngleDegrees(): " + dir.opposite().getAngleDegrees());
+                //System.out.println("dir: " + dir.);
 
                 // Dodge bullets
                 // Bullet sensing is different from regular sensing. All units have a bullet
                 // sensing range that is larger than their sight range, meaning bullets
                 // can be sensed at a further distance than the units that fire them.
 
-
                 // Move randomly
-                tryMove(randomDirection());
-
+                //boolean didMove = tryMove(dir, 90, 4);
+                //System.out.println(didMove);
+                //tryMoveInARectangle();
                 // Broadcast archon's location for other robots on the team to know
+                tryMoveInARectangle();
                 MapLocation myLocation = rc.getLocation();
-                rc.broadcast(0,(int)myLocation.x);
-                rc.broadcast(1,(int)myLocation.y);
+                rc.broadcast(ARCHON_X,(int)myLocation.x);
+                rc.broadcast(ARCHON_Y,(int)myLocation.y);
 
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
@@ -91,8 +103,8 @@ public strictfp class RobotPlayer {
             try {
 
                 // Listen for home archon's location
-                int xPos = rc.readBroadcast(0);
-                int yPos = rc.readBroadcast(1);
+                int xPos = rc.readBroadcast(ARCHON_X);
+                int yPos = rc.readBroadcast(ARCHON_Y);
                 MapLocation archonLoc = new MapLocation(xPos,yPos);
 
                 // Generate a random direction
@@ -232,7 +244,8 @@ public strictfp class RobotPlayer {
     static boolean tryMove(Direction dir, float degreeOffset, int checksPerSide) throws GameActionException {
 
         // First, try intended direction
-        if (rc.canMove(dir)) {
+        if (!rc.hasMoved() && rc.canMove(dir)) {
+            System.out.println("rc.canMove in tryMove... ");
             rc.move(dir);
             return true;
         }
@@ -243,12 +256,12 @@ public strictfp class RobotPlayer {
 
         while(currentCheck<=checksPerSide) {
             // Try the offset of the left side
-            if(rc.canMove(dir.rotateLeftDegrees(degreeOffset*currentCheck))) {
+            if(!rc.hasMoved() && rc.canMove(dir.rotateLeftDegrees(degreeOffset*currentCheck))) {
                 rc.move(dir.rotateLeftDegrees(degreeOffset*currentCheck));
                 return true;
             }
             // Try the offset on the right side
-            if(rc.canMove(dir.rotateRightDegrees(degreeOffset*currentCheck))) {
+            if(!rc.hasMoved() && rc.canMove(dir.rotateRightDegrees(degreeOffset*currentCheck))) {
                 rc.move(dir.rotateRightDegrees(degreeOffset*currentCheck));
                 return true;
             }
@@ -261,6 +274,51 @@ public strictfp class RobotPlayer {
     }
 
     /**
+     * Attempts to move the robot continuously in a rectangle (anticlockwise direction)
+     * @return true if a move was performed
+     * @throws GameActionException
+     */
+
+    static boolean tryMoveInARectangle() throws GameActionException {
+        //System.out.println("ARCHON_DIRECTION: " + ARCHON_DIRECTION);
+        if (ARCHON_DIRECTION == 1) {
+                if (canMoveNWSE(Direction.getNorth(), Direction.getWest(), 2)) return true;
+            }
+            else if (ARCHON_DIRECTION == 2) {
+                if (canMoveNWSE(Direction.getWest(), Direction.getSouth(), 3)) return true;
+            }
+            else if (ARCHON_DIRECTION == 3) {
+                if (canMoveNWSE(Direction.getSouth(), Direction.getEast(), 4)) return true;
+            }
+            else {
+                if (canMoveNWSE(Direction.getEast(), Direction.getNorth(), 1)) return true;
+            }
+        //System.out.println("Returning false...");
+        return false;
+        }
+
+    /**
+     * Helper method to move in NWSE method (anticlockwise direction)
+     *
+     * @throws GameActionException
+     */
+
+    static boolean canMoveNWSE(Direction currDir, Direction newDir, int newDirCode) throws GameActionException {
+        if (!rc.hasMoved() && rc.canMove(currDir)) {
+            rc.move(currDir);
+            return true;
+        }
+        else {
+            if (!rc.hasMoved() && rc.canMove(newDir)) {
+                rc.move(newDir);
+                ARCHON_DIRECTION = newDirCode;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * A slightly more complicated example function, this returns true if the given bullet is on a collision
      * course with the current robot. Doesn't take into account objects between the bullet and this robot.
      *
@@ -269,7 +327,6 @@ public strictfp class RobotPlayer {
      */
     static boolean willCollideWithMe(BulletInfo bullet) {
         MapLocation myLocation = rc.getLocation();
-
         // Get relevant bullet information
         Direction propagationDirection = bullet.dir;
         MapLocation bulletLocation = bullet.location;
