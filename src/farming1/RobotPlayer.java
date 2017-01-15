@@ -90,12 +90,13 @@ public strictfp class RobotPlayer {
 
                     // Randomly attempt to build a gardener in this direction
                     //if (Math.random() < .1 && rc.canHireGardener(randomDirection())) {
+                    dodge();
+                    //dodgeEnemies();
                     Direction dir = randomDirection();
                     if (rc.getBuildCooldownTurns() == 0 && rc.canHireGardener(dir)) {
                         rc.hireGardener(dir);
                     }
                     System.out.println("Arch D0: getroundnum : " + rc.getRoundNum());
-                    dodge();
                     System.out.println("Arch D1: getroundnum : " + rc.getRoundNum());
                     if (!rc.hasMoved()) wander();
                     System.out.println("Arch D2: getroundnum : " + rc.getRoundNum());
@@ -118,6 +119,8 @@ public strictfp class RobotPlayer {
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
 
+                dodge(); // dodge bullets
+                dodgeEnemies(); // dodge Enemies
                 // Listen for home archon's location
                 int xPos = rc.readBroadcast(ARCHON_X_CHANNEL);
                 int yPos = rc.readBroadcast(ARCHON_Y_CHANNEL);
@@ -144,11 +147,7 @@ public strictfp class RobotPlayer {
 
                 }
 
-                System.out.println("Gardener G0: getroundnum : " + rc.getRoundNum());
-                dodge();
-                System.out.println("Gardener G1: getroundnum : " + rc.getRoundNum());
                 if (!rc.hasMoved()) wander();
-                System.out.println("Gardener G2: getroundnum : " + rc.getRoundNum());
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
 
@@ -169,8 +168,6 @@ public strictfp class RobotPlayer {
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
 
-                dodge();
-
                 // See if there are any nearby enemy robots
                 RobotInfo[] robots = rc.senseNearbyRobots(-1, enemy);
 
@@ -180,10 +177,14 @@ public strictfp class RobotPlayer {
                     // And we have enough bullets, and haven't attacked yet this turn...
                     if (robots.length > 1 && rc.canFireTriadShot()) {
                         rc.fireTriadShot(rc.getLocation().directionTo(robots[1].location)); // review
+                        Direction chase = rc.getLocation().directionTo(robots[1].location);
+                        tryMove(chase);
                     }
                     else if (rc.canFireSingleShot()) {
                         // ...Then fire a bullet in the direction of the enemy.
                         rc.fireSingleShot(rc.getLocation().directionTo(robots[0].location));
+                        Direction chase = rc.getLocation().directionTo(robots[0].location);
+                        tryMove(chase);
                     }
                 }
 
@@ -218,7 +219,7 @@ public strictfp class RobotPlayer {
                         break;
                     }
                 }
-                if (! rc.hasAttacked()) {
+                if (!rc.hasAttacked()) {
                     wander();
                 }
                 Clock.yield();
@@ -303,6 +304,18 @@ public strictfp class RobotPlayer {
             }
         }
         wander();
+    }
+
+    // currently used by a gardener only
+    static boolean dodgeEnemies() throws GameActionException {
+        RobotInfo[] bots = rc.senseNearbyRobots();
+        for (RobotInfo b : bots) {
+            if (b.getTeam() != rc.getTeam()) {
+                Direction towards = rc.getLocation().directionTo(b.getLocation());
+                return tryMove(towards.rotateRightDegrees(90)) || tryMove(towards.rotateLeftDegrees(90));
+            }
+        }
+        return false;
     }
 
     public static void wander() throws GameActionException {
