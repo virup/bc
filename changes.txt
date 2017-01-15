@@ -1,3 +1,6 @@
+1.2 The Archon cannot hire another Gardener for 10 turns. 
+Will this be useful for optimization ?
+
 1.1 Modified calculateMapLength to use Archon's initial coordinates.
    if init_x > init_y, then move Archon to the East, calculate the distance
    shifted once the archon can't move any further (this assumes it hits the 

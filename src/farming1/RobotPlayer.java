@@ -89,8 +89,14 @@ public strictfp class RobotPlayer {
                     //rc.broadcast(1,(int)myLocation.y);
 
                     // Randomly attempt to build a gardener in this direction
-                    if (Math.random() < .1 && rc.canHireGardener(randomDirection())) {
-                        rc.hireGardener(randomDirection());
+                    //if (Math.random() < .1 && rc.canHireGardener(randomDirection())) {
+                    System.out.println("Archon: buildCooldownTurns: " + rc.getBuildCooldownTurns());
+                    Direction dir = randomDirection();
+                    System.out.println("Before if: buildCooldownTurns: " + rc.getBuildCooldownTurns());
+                    if (rc.getBuildCooldownTurns() == 0 && rc.canHireGardener(dir)) {
+                        System.out.println("Before: buildCooldownTurns: " + rc.getBuildCooldownTurns());
+                        rc.hireGardener(dir);
+                        System.out.println("After: buildCooldownTurns: " + rc.getBuildCooldownTurns());
                     }
 
                     moveAwayFromIncomingBullets();
@@ -168,9 +174,13 @@ public strictfp class RobotPlayer {
                 RobotInfo[] robots = rc.senseNearbyRobots(-1, enemy);
 
                 // If there are some...
-                if (robots.length > 0) {
+                // added rc.hasAttacked()
+                if (!rc.hasAttacked() && robots.length > 0) {
                     // And we have enough bullets, and haven't attacked yet this turn...
-                    if (rc.canFireSingleShot()) {
+                    if (robots.length > 1 && rc.canFireTriadShot()) {
+                        rc.fireTriadShot(rc.getLocation().directionTo(robots[1].location)); // review
+                    }
+                    else if (rc.canFireSingleShot()) {
                         // ...Then fire a bullet in the direction of the enemy.
                         rc.fireSingleShot(rc.getLocation().directionTo(robots[0].location));
                     }
@@ -253,25 +263,6 @@ public strictfp class RobotPlayer {
     }
 
     /**
-     * Attempts to move away from incoming bullets
-     *
-     * @return true if a move was performed
-     * @throws GameActionException
-     */
-    static boolean moveAwayFromIncomingBullets() throws GameActionException {
-        BulletInfo[] bullets = rc.senseNearbyBullets();
-        Direction dir = randomDirection();
-        for(BulletInfo a_bullet: bullets)
-            if (willCollideWithMe(a_bullet)) {
-                dir = a_bullet.getDir().rotateLeftRads(90);
-                break;
-            }
-
-        if (tryMove(dir)) return true;
-        return false;
-    }
-
-    /**
      * Attempts to move in a given direction, while avoiding small obstacles direction in the path.
      *
      * @param dir The intended direction of movement
@@ -308,6 +299,25 @@ public strictfp class RobotPlayer {
         }
 
         // A move never happened, so return false.
+        return false;
+    }
+
+    /**
+     * Attempts to move away from incoming bullets
+     *
+     * @return true if a move was performed
+     * @throws GameActionException
+     */
+    static boolean moveAwayFromIncomingBullets() throws GameActionException {
+        BulletInfo[] bullets = rc.senseNearbyBullets();
+        for(BulletInfo a_bullet: bullets)
+            if (willCollideWithMe(a_bullet)) {
+                Direction possible_dir1 = a_bullet.getDir().rotateLeftDegrees(120);
+                Direction possible_dir2 = a_bullet.getDir().rotateRightDegrees(120);
+                if (tryMove(possible_dir1) || tryMove(possible_dir2)) return true;
+            }
+
+        if (tryMove(randomDirection())) return true;
         return false;
     }
 
