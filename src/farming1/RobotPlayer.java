@@ -88,15 +88,12 @@ public strictfp class RobotPlayer {
                     //rc.broadcast(0,(int)myLocation.x);
                     //rc.broadcast(1,(int)myLocation.y);
 
-                    Direction dir = randomDirection();
-
                     // Randomly attempt to build a gardener in this direction
-                    //if (Math.random() < .01 && rc.canHireGardener(dir)) {
-                    if (rc.readBroadcast(CURRENT_NUM_TREES_CHANNEL) < NUM_OF_TREEPLANTERS && rc.canHireGardener(dir))
-                        rc.hireGardener(dir);
+                    if (Math.random() < .1 && rc.canHireGardener(randomDirection())) {
+                        rc.hireGardener(randomDirection());
+                    }
 
-                    // Move in the opposite direction of hiring a gardener.
-                    tryMove(dir.opposite());
+                    moveAwayFromIncomingBullets();
 
                 }
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
@@ -118,43 +115,32 @@ public strictfp class RobotPlayer {
             try {
 
                 // Listen for home archon's location
-                // not using this for now
-                /*
                 int xPos = rc.readBroadcast(ARCHON_X_CHANNEL);
                 int yPos = rc.readBroadcast(ARCHON_Y_CHANNEL);
                 MapLocation archonLoc = new MapLocation(xPos,yPos);
-                */
                 System.out.println("rc.getID() = " + rc.getID());
 
+                Direction dir = randomDirection();
 
-                if (rc.readBroadcast(CURRENT_NUM_TREES_CHANNEL) < NUM_OF_TREEPLANTERS && rc.readBroadcast(PLANTER1_CHANNEL) == 0) {
-                    System.out.println("CURRENT_NUM_TREES_CHANNEL...");
-                    rc.broadcast(CURRENT_NUM_TREES_CHANNEL, currentNumTreePlanters++);
-                    rc.broadcast(PLANTER1_CHANNEL, rc.getID());
+                if (Math.random() < .1 && rc.canInteractWithTree(rc.getLocation()) && rc.canWater(rc.getLocation())) {
+                    rc.water(rc.getLocation());
                 }
-
-                if (rc.getID() == rc.readBroadcast(PLANTER1_CHANNEL)) {
-                    System.out.println("PLANTER1_CHANNEL...");
-                    Direction dir = rc.getLocation().directionTo(new MapLocation(1,1));
-                    boolean moved = tryMove(dir);
-                    if (!moved && rc.getLocation().equals(new MapLocation(1,1))) {
-                        if (rc.canPlantTree(Direction.getEast())) { // Bytecode cost: 10
-                            rc.plantTree(Direction.getEast());
-                        }
-                    }
+                else if (Math.random() < .1 && rc.canPlantTree(dir)) {
+                    // canPlantTree has Bytecode cost: 10
+                    // plantTree has Bytecode cost: 0
+                    rc.plantTree(dir);
                 }
-
                 else {
-                    Direction dir2 = randomDirection();
                     // Randomly attempt to build a soldier or lumberjack in this direction
-                    if (rc.canBuildRobot(RobotType.SOLDIER, dir2) && Math.random() < .01) {
-                        rc.buildRobot(RobotType.SOLDIER, dir2);
-                    } else if (rc.canBuildRobot(RobotType.LUMBERJACK, dir2) && Math.random() < .01 && rc.isBuildReady()) {
-                        rc.buildRobot(RobotType.LUMBERJACK, dir2);
+                    if (rc.canBuildRobot(RobotType.SOLDIER, dir) && Math.random() < .5) {
+                        rc.buildRobot(RobotType.SOLDIER, dir);
+                    } else if (rc.canBuildRobot(RobotType.LUMBERJACK, dir) && Math.random() < .1 && rc.isBuildReady()) {
+                        rc.buildRobot(RobotType.LUMBERJACK, dir);
                     }
 
                     // Move randomly
-                    tryMove(dir2);
+                    //tryMove(dir);
+                    moveAwayFromIncomingBullets();
 
                 }
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
@@ -191,7 +177,8 @@ public strictfp class RobotPlayer {
                 }
 
                 // Move randomly
-                tryMove(randomDirection());
+                //tryMove(randomDirection());
+                moveAwayFromIncomingBullets();
 
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
@@ -263,6 +250,25 @@ public strictfp class RobotPlayer {
      */
     static boolean tryMove(Direction dir) throws GameActionException {
         return tryMove(dir,20,3);
+    }
+
+    /**
+     * Attempts to move away from incoming bullets
+     *
+     * @return true if a move was performed
+     * @throws GameActionException
+     */
+    static boolean moveAwayFromIncomingBullets() throws GameActionException {
+        BulletInfo[] bullets = rc.senseNearbyBullets();
+        Direction dir = randomDirection();
+        for(BulletInfo a_bullet: bullets)
+            if (willCollideWithMe(a_bullet)) {
+                dir = a_bullet.getDir().rotateLeftRads(90);
+                break;
+            }
+
+        if (tryMove(dir)) return true;
+        return false;
     }
 
     /**
