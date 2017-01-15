@@ -1,13 +1,39 @@
-package examplefuncsplayer;
+package Defend;
+
 import battlecode.common.*;
 
 public strictfp class RobotPlayer {
+
     static RobotController rc;
+    static int ARCHON_X_CHANNEL = 100;
+    static int ARCHON_Y_CHANNEL = 101;
+    static int GARDENER_NUMBER_CHANNEL = 102;
+    static int PROTECTOR_NUMBER_CHANNEL = 103; // stores ID of Archon's protector
+    static int NUM_OF_GARDENERS = 4;
+
+    // will use these constants to assign a soldier to follow 2 gardeners for now
+    // in case a gardener gets killed, will need to reassign the soldier
+    // same if a soldier gets killed
+    static int GARDENER1_ID_CHANNEL = 200;
+    static int GARDENER1_X_CHANNEL = 201;
+    static int GARDENER1_Y_CHANNEL = 202;
+    static int GARDENER2_ID_CHANNEL = 203;
+    static int GARDENER2_X_CHANNEL = 204;
+    static int GARDENER2_Y_CHANNEL = 205;
+
+    /*
+    static int PROTECTOR_1_ID_CHANNEL = 102;
+    static int PROTECTOR_2_ID_CHANNEL = 103;
+    static int PROTECTOR_3_ID_CHANNEL = 104;
+    static int PROTECTOR_4_ID_CHANNEL = 105;
+    */
+    //static int[] PROTECTOR_IDS = {PROTECTOR_1_ID_CHANNEL, PROTECTOR_2_ID_CHANNEL, PROTECTOR_3_ID_CHANNEL, PROTECTOR_4_ID_CHANNEL};
+
 
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
      * If this method returns, the robot dies!
-    **/
+     **/
     @SuppressWarnings("unused")
     public static void run(RobotController rc) throws GameActionException {
 
@@ -31,7 +57,7 @@ public strictfp class RobotPlayer {
                 runLumberjack();
                 break;
         }
-	}
+    }
 
     static void runArchon() throws GameActionException {
         System.out.println("I'm an archon!");
@@ -42,25 +68,32 @@ public strictfp class RobotPlayer {
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
 
-                // Generate a random direction
-                Direction dir = randomDirection();
-                /*
-                // Randomly attempt to build a gardener in this direction
-                if (rc.canHireGardener(dir) && Math.random() < .01) {
-                    rc.hireGardener(dir);
-                }
-                */
-                // Move randomly
-                tryMove(randomDirection());
-
                 // Broadcast archon's location for other robots on the team to know
                 MapLocation myLocation = rc.getLocation();
-                rc.broadcast(0,(int)myLocation.x);
-                rc.broadcast(1,(int)myLocation.y);
+                rc.broadcast(ARCHON_X_CHANNEL, (int)myLocation.x);
+                rc.broadcast(ARCHON_Y_CHANNEL, (int)myLocation.y);
 
+                if (rc.getBuildCooldownTurns() == 0 && rc.readBroadcast(GARDENER_NUMBER_CHANNEL) < NUM_OF_GARDENERS) {
+                    Direction dir = randomDirection();
+                    int tryCount = 0;
+                    // try 5 times to constructing a gardener
+                    while (tryCount < 5) {
+                        if (rc.canHireGardener(dir)) {
+                            int currGardeners = rc.readBroadcast(GARDENER_NUMBER_CHANNEL);
+                            rc.broadcast(GARDENER_NUMBER_CHANNEL, currGardeners+1);
+                            rc.hireGardener(dir);
+                            break;
+                        }
+                        else dir = randomDirection();
+                        tryCount++;
+                    }
+                }
+
+                if (!rc.hasMoved()) {
+                    wander();
+                }
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
-
             } catch (Exception e) {
                 System.out.println("Archon Exception");
                 e.printStackTrace();
@@ -68,7 +101,7 @@ public strictfp class RobotPlayer {
         }
     }
 
-	static void runGardener() throws GameActionException {
+    static void runGardener() throws GameActionException {
         System.out.println("I'm a gardener!");
 
         // The code you want your robot to perform every round should be in this loop
@@ -77,23 +110,53 @@ public strictfp class RobotPlayer {
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
 
-                // Listen for home archon's location
-                int xPos = rc.readBroadcast(0);
-                int yPos = rc.readBroadcast(1);
-                MapLocation archonLoc = new MapLocation(xPos,yPos);
+                if (rc.getHealth() <= 20) {
+                    int currGardeners = rc.readBroadcast(GARDENER_NUMBER_CHANNEL);
+                    rc.broadcast(GARDENER_NUMBER_CHANNEL, currGardeners - 1);
+                }
 
-                // Generate a random direction
+                // Listen for home archon's location
+                int xPos = rc.readBroadcast(ARCHON_X_CHANNEL);
+                int yPos = rc.readBroadcast(ARCHON_Y_CHANNEL);
+                System.out.println("rc.getID() = " + rc.getID());
                 Direction dir = randomDirection();
 
-                // Randomly attempt to build a soldier or lumberjack in this direction
-                if (rc.canBuildRobot(RobotType.SOLDIER, dir) && Math.random() < .01) {
+                int protectorID = rc.readBroadcast(PROTECTOR_NUMBER_CHANNEL);
+                if (protectorID != 0 && !buildSoldierImmediately()) {
+                    wander();
+                    Clock.yield(); // review
+                }
+
+                if (rc.canBuildRobot(RobotType.SOLDIER, dir) && Math.random() < .5) {
                     rc.buildRobot(RobotType.SOLDIER, dir);
-                } else if (rc.canBuildRobot(RobotType.LUMBERJACK, dir) && Math.random() < .01 && rc.isBuildReady()) {
+                } else if (rc.canBuildRobot(RobotType.LUMBERJACK, dir) && Math.random() < .1 && rc.isBuildReady()) {
                     rc.buildRobot(RobotType.LUMBERJACK, dir);
                 }
 
-                // Move randomly
-                tryMove(randomDirection());
+                follow(xPos, yPos);
+                if (!rc.hasMoved()) {
+                    wander();
+                }
+
+                /*
+                if (rc.canInteractWithTree(rc.getLocation()) && rc.canWater(rc.getLocation())) {
+                    rc.water(rc.getLocation());
+                }
+                else if (Math.random() < .1 && rc.canPlantTree(dir)) {
+                    // canPlantTree has Bytecode cost: 10
+                    // plantTree has Bytecode cost: 0
+                    rc.plantTree(dir);
+                }
+                else {
+                    // Randomly attempt to build a soldier or lumberjack in this direction
+                    if (rc.canBuildRobot(RobotType.SOLDIER, dir) && Math.random() < .5) {
+                        rc.buildRobot(RobotType.SOLDIER, dir);
+                    } else if (rc.canBuildRobot(RobotType.LUMBERJACK, dir) && Math.random() < .1 && rc.isBuildReady()) {
+                        rc.buildRobot(RobotType.LUMBERJACK, dir);
+                    }
+
+                }
+                */
 
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
@@ -105,6 +168,25 @@ public strictfp class RobotPlayer {
         }
     }
 
+    static boolean buildSoldierImmediately() throws GameActionException {
+        int count = 0;
+        while (count < 5) {
+            Direction dir = randomDirection();
+            if (rc.canBuildRobot(RobotType.SOLDIER, dir)) {
+                rc.buildRobot(RobotType.SOLDIER, dir);
+                return true;
+            }
+            count++;
+        }
+        return false;
+    }
+
+    static boolean anActiveProtector() throws GameActionException {
+        int protectorID = rc.readBroadcast(PROTECTOR_NUMBER_CHANNEL);
+        if (protectorID == 0) return false;
+        return true;
+    }
+
     static void runSoldier() throws GameActionException {
         System.out.println("I'm an soldier!");
         Team enemy = rc.getTeam().opponent();
@@ -114,22 +196,37 @@ public strictfp class RobotPlayer {
 
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
-                MapLocation myLocation = rc.getLocation();
+
+                if (!anActiveProtector()) {
+                    rc.broadcast(PROTECTOR_NUMBER_CHANNEL, rc.getID());
+                }
+
+                if (rc.getID() == rc.readBroadcast(PROTECTOR_NUMBER_CHANNEL)) {
+                    int xPos = rc.readBroadcast(ARCHON_X_CHANNEL);
+                    int yPos = rc.readBroadcast(ARCHON_Y_CHANNEL);
+                    follow(xPos, yPos); // go towards Archon to protect it
+                }
+
 
                 // See if there are any nearby enemy robots
                 RobotInfo[] robots = rc.senseNearbyRobots(-1, enemy);
 
                 // If there are some...
-                if (robots.length > 0) {
+                // added rc.hasAttacked()
+                if (!rc.hasAttacked() && robots.length > 0) {
                     // And we have enough bullets, and haven't attacked yet this turn...
-                    if (rc.canFireSingleShot()) {
+                    if (robots.length > 1 && rc.canFireTriadShot()) {
+                        rc.fireTriadShot(rc.getLocation().directionTo(robots[1].location)); // review
+                        Direction chase = rc.getLocation().directionTo(robots[1].location);
+                        tryMove(chase);
+                    }
+                    else if (rc.canFireSingleShot()) {
                         // ...Then fire a bullet in the direction of the enemy.
                         rc.fireSingleShot(rc.getLocation().directionTo(robots[0].location));
+                        Direction chase = rc.getLocation().directionTo(robots[0].location);
+                        tryMove(chase);
                     }
                 }
-
-                // Move randomly
-                tryMove(randomDirection());
 
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
@@ -141,44 +238,31 @@ public strictfp class RobotPlayer {
         }
     }
 
+    // from lecture code.
     static void runLumberjack() throws GameActionException {
-        System.out.println("I'm a lumberjack!");
-        Team enemy = rc.getTeam().opponent();
-
-        // The code you want your robot to perform every round should be in this loop
         while (true) {
-
-            // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
-
-                // See if there are any enemy robots within striking range (distance 1 from lumberjack's radius)
-                RobotInfo[] robots = rc.senseNearbyRobots(RobotType.LUMBERJACK.bodyRadius+GameConstants.LUMBERJACK_STRIKE_RADIUS, enemy);
-
-                if(robots.length > 0 && !rc.hasAttacked()) {
-                    // Use strike() to hit all nearby robots!
-                    rc.strike();
-                } else {
-                    // No close robots, so search for robots within sight radius
-                    robots = rc.senseNearbyRobots(-1,enemy);
-
-                    // If there is a robot, move towards it
-                    if(robots.length > 0) {
-                        MapLocation myLocation = rc.getLocation();
-                        MapLocation enemyLocation = robots[0].getLocation();
-                        Direction toEnemy = myLocation.directionTo(enemyLocation);
-
-                        tryMove(toEnemy);
-                    } else {
-                        // Move Randomly
-                        tryMove(randomDirection());
+                RobotInfo[] bots = rc.senseNearbyRobots();
+                for (RobotInfo b : bots) {
+                    if (b.getTeam() != rc.getTeam() && rc.canStrike()) {
+                        rc.strike();
+                        Direction chase = rc.getLocation().directionTo(b.getLocation());
+                        tryMove(chase);
+                        break;
                     }
                 }
-
-                // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
+                TreeInfo[] trees = rc.senseNearbyTrees();
+                for (TreeInfo t : trees) {
+                    if (rc.canChop(t.getLocation())) {
+                        rc.chop(t.getLocation());
+                        break;
+                    }
+                }
+                if (!rc.hasAttacked()) {
+                    wander();
+                }
                 Clock.yield();
-
             } catch (Exception e) {
-                System.out.println("Lumberjack Exception");
                 e.printStackTrace();
             }
         }
@@ -188,8 +272,20 @@ public strictfp class RobotPlayer {
      * Returns a random Direction
      * @return a random Direction
      */
-    static Direction randomDirection() {
-        return new Direction((float)Math.random() * 2 * (float)Math.PI);
+        static Direction randomDirection() {
+            return new Direction((float)Math.random() * 2 * (float)Math.PI);
+        }
+
+
+    /**
+     * Try to follow another robot which is currently at (x, y) location on the map
+     */
+    static void follow(int target_x, int target_y) throws GameActionException {
+        try {
+            tryMove(rc.getLocation().directionTo(new MapLocation(target_x, target_y)));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -243,6 +339,20 @@ public strictfp class RobotPlayer {
         return false;
     }
 
+    static boolean trySidestep(BulletInfo bullet) throws GameActionException{
+
+        Direction towards = bullet.getDir();
+        //MapLocation leftGoal = rc.getLocation().add(towards.rotateLeftDegrees(90), rc.getType().bodyRadius);
+        //MapLocation rightGoal = rc.getLocation().add(towards.rotateRightDegrees(90), rc.getType().bodyRadius);
+        return(tryMove(towards.rotateRightDegrees(90)) || tryMove(towards.rotateLeftDegrees(90)));
+    }
+
+
+    public static void wander() throws GameActionException {
+        Direction dir = randomDirection();
+        tryMove(dir);
+    }
+
     /**
      * A slightly more complicated example function, this returns true if the given bullet is on a collision
      * course with the current robot. Doesn't take into account objects between the bullet and this robot.
@@ -275,4 +385,6 @@ public strictfp class RobotPlayer {
 
         return (perpendicularDist <= rc.getType().bodyRadius);
     }
+
 }
+
