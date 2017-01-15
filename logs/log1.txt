@@ -1,18 +1,18 @@
 Welcome to battlecode!
 :compileJava UP-TO-DATE
-:compileScala
+:compileScala UP-TO-DATE
 :processResources UP-TO-DATE
-:classes
-:jar
-:assemble
+:classes UP-TO-DATE
+:jar UP-TO-DATE
+:assemble UP-TO-DATE
 :compileTestJava UP-TO-DATE
-:compileTestScala
+:compileTestScala UP-TO-DATE
 :processTestResources UP-TO-DATE
-:testClasses
-:test
-:check
+:testClasses UP-TO-DATE
+:test UP-TO-DATE
+:check UP-TO-DATE
 :unpackClient UP-TO-DATE
-:build
+:build UP-TO-DATE
 :run
 [server:debug] Awaiting match
 [server:debug] Running: examplefuncsplayer (/Users/rahubatr/bc/build/classes)  vs farming1 (/Users/rahubatr/bc/build/classes)  on [shrine]
@@ -10098,10 +10098,10 @@ Gardener G2: getroundnum : 900
 [server]                    farming1 (B) wins (round 900)
 [server] Reason: The winning team won by destruction.
 [server] -------------------- Match Finished --------------------
-[server:debug] match completed in 1.628 seconds
+[server:debug] match completed in 1.414 seconds
 [server:debug] Awaiting match
 [server:debug] Shutting down server
 
 BUILD SUCCESSFUL
 
-Total time: 8.734 secs
+Total time: 3.029 secs
