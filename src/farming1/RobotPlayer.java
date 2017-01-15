@@ -2,6 +2,18 @@ package farming1;
 import battlecode.common.*;
 
 public strictfp class RobotPlayer {
+    private static final int ARCHON_X_CHANNEL = 0;
+    private static final int ARCHON_Y_CHANNEL = 1;
+    private static final int CURRENT_NUM_TREES_CHANNEL = 2;
+    private static final int PLANTER1_CHANNEL = 3;
+    private static final int TREE_PLANTER2_CHANNEL = 4;
+    private static final int TREE_PLANTER3_CHANNEL = 5;
+    private static final int TREE_PLANTER4_CHANNEL = 6;
+
+
+    private static final int NUM_OF_TREEPLANTERS = 4;
+    private static int currentNumTreePlanters;
+
     static RobotController rc;
 
     static int fieldSize = 0;
@@ -76,18 +88,16 @@ public strictfp class RobotPlayer {
                     //rc.broadcast(0,(int)myLocation.x);
                     //rc.broadcast(1,(int)myLocation.y);
 
-                    //Direction dir = randomDirection();
+                    Direction dir = randomDirection();
 
                     // Randomly attempt to build a gardener in this direction
-                    //if (rc.canHireGardener(dir) && Math.random() < .01) {
-                    //    rc.hireGardener(dir);
-                    //}
+                    //if (Math.random() < .01 && rc.canHireGardener(dir)) {
+                    if (rc.readBroadcast(CURRENT_NUM_TREES_CHANNEL) < NUM_OF_TREEPLANTERS && rc.canHireGardener(dir))
+                        rc.hireGardener(dir);
 
                     // Move in the opposite direction of hiring a gardener.
-                    //System.out.println("tryMove in opposite direction...");
-                    //tryMove(dir.opposite());
+                    tryMove(dir.opposite());
 
-                    System.out.println("mapLength: " + mapSideLength);
                 }
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
@@ -96,32 +106,6 @@ public strictfp class RobotPlayer {
                 e.printStackTrace();
             }
         }
-    }
-
-    /**
-     * Method to calculate the map length.
-     * Takes into account if the initial Archon's position's X coordinate is bigger than the Y coordinate (or vice-versa)
-     * @throws GameActionException
-     */
-    static void calculateMapLength(Direction dir) throws GameActionException {
-        try {
-            if (!rc.hasMoved() && rc.canMove(dir)) rc.move(dir);
-            else {
-                distanceShifted = rc.getLocation().distanceTo(initPosition);
-                float initDistFromOrigin;
-                float currDistFromOrigin;
-
-                if (dir.equals(Direction.getEast())) initDistFromOrigin = initPosition.x;
-                else initDistFromOrigin = initPosition.y;
-                mapSideLength = initDistFromOrigin + distanceShifted + RobotType.ARCHON.bodyRadius;
-                isMapLengthKnown = true;
-            }
-            //Clock.yield();
-        } catch (Exception e) {
-            System.out.println("calculateMapLength Exception");
-            e.printStackTrace();
-        }
-
     }
 
     static void runGardener() throws GameActionException {
@@ -134,23 +118,45 @@ public strictfp class RobotPlayer {
             try {
 
                 // Listen for home archon's location
-                int xPos = rc.readBroadcast(0);
-                int yPos = rc.readBroadcast(1);
+                // not using this for now
+                /*
+                int xPos = rc.readBroadcast(ARCHON_X_CHANNEL);
+                int yPos = rc.readBroadcast(ARCHON_Y_CHANNEL);
                 MapLocation archonLoc = new MapLocation(xPos,yPos);
+                */
+                System.out.println("rc.getID() = " + rc.getID());
 
-                // Generate a random direction
-                Direction dir = randomDirection();
 
-                // Randomly attempt to build a soldier or lumberjack in this direction
-                if (rc.canBuildRobot(RobotType.SOLDIER, dir) && Math.random() < .01) {
-                    rc.buildRobot(RobotType.SOLDIER, dir);
-                } else if (rc.canBuildRobot(RobotType.LUMBERJACK, dir) && Math.random() < .01 && rc.isBuildReady()) {
-                    rc.buildRobot(RobotType.LUMBERJACK, dir);
+                if (rc.readBroadcast(CURRENT_NUM_TREES_CHANNEL) < NUM_OF_TREEPLANTERS && rc.readBroadcast(PLANTER1_CHANNEL) == 0) {
+                    System.out.println("CURRENT_NUM_TREES_CHANNEL...");
+                    rc.broadcast(CURRENT_NUM_TREES_CHANNEL, currentNumTreePlanters++);
+                    rc.broadcast(PLANTER1_CHANNEL, rc.getID());
                 }
 
-                // Move randomly
-                tryMove(randomDirection());
+                if (rc.getID() == rc.readBroadcast(PLANTER1_CHANNEL)) {
+                    System.out.println("PLANTER1_CHANNEL...");
+                    Direction dir = rc.getLocation().directionTo(new MapLocation(1,1));
+                    boolean moved = tryMove(dir);
+                    if (!moved && rc.getLocation().equals(new MapLocation(1,1))) {
+                        if (rc.canPlantTree(Direction.getEast())) { // Bytecode cost: 10
+                            rc.plantTree(Direction.getEast());
+                        }
+                    }
+                }
 
+                else {
+                    Direction dir2 = randomDirection();
+                    // Randomly attempt to build a soldier or lumberjack in this direction
+                    if (rc.canBuildRobot(RobotType.SOLDIER, dir2) && Math.random() < .01) {
+                        rc.buildRobot(RobotType.SOLDIER, dir2);
+                    } else if (rc.canBuildRobot(RobotType.LUMBERJACK, dir2) && Math.random() < .01 && rc.isBuildReady()) {
+                        rc.buildRobot(RobotType.LUMBERJACK, dir2);
+                    }
+
+                    // Move randomly
+                    tryMove(dir2);
+
+                }
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
 
@@ -330,6 +336,32 @@ public strictfp class RobotPlayer {
         float perpendicularDist = (float)Math.abs(distToRobot * Math.sin(theta)); // soh cah toa :)
 
         return (perpendicularDist <= rc.getType().bodyRadius);
+    }
+
+    /**
+     * Method to calculate the map length.
+     * Takes into account Archon's starting X coordinate & Y coordinate values to move shorter distance to the edge
+     * @throws GameActionException
+     */
+    static void calculateMapLength(Direction dir) throws GameActionException {
+        try {
+            if (!rc.hasMoved() && rc.canMove(dir)) rc.move(dir);
+            else {
+                distanceShifted = rc.getLocation().distanceTo(initPosition);
+                float initDistFromOrigin;
+
+                if (dir.equals(Direction.getEast())) initDistFromOrigin = initPosition.x;
+                else initDistFromOrigin = initPosition.y;
+
+                mapSideLength = initDistFromOrigin + distanceShifted + RobotType.ARCHON.bodyRadius;
+                isMapLengthKnown = true;
+            }
+            //Clock.yield();
+        } catch (Exception e) {
+            System.out.println("calculateMapLength Exception");
+            e.printStackTrace();
+        }
+
     }
 }
 

@@ -1,13 +1,12 @@
 1.1 Modified calculateMapLength to use Archon's initial coordinates.
    if init_x > init_y, then move Archon to the East, calculate the distance
    shifted once the archon can't move any further (this assumes it hits the 
-   map edge) and add it to init_x to caculate the map side length.
+   map edge) and add it to init_x to calculate the map side length.
    else move north. 
 
-1. checking what info can be retrieved using archon's position
-- commented out all other code. only archon will move for my player.
-- printing out stuff using println method
-- Archon getting stuck...does tryMove really work even if called with 30 deg, 12?
-static boolean tryMove(Direction dir, float degreeOffset, int checksPerSide) throws GameActionException {
+***What I am trying to do ?***
 
-
+1. Calculate the field size
+2. Hire and move gardeners to particular locations on the map
+3. Plant trees in simple configuration (a horizontal line)
+4. Water those trees (probably using a second gardener?)
