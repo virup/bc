@@ -1,0 +1,6 @@
+What I am trying to do ?
+
+1. Calculate the field size
+2. Hire and move gardeners to particular locations on the map
+3. Plant trees in simple configuration (a horizontal line)
+4. Water those trees (probably using a second gardener?)
