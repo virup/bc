@@ -90,17 +90,15 @@ public strictfp class RobotPlayer {
 
                     // Randomly attempt to build a gardener in this direction
                     //if (Math.random() < .1 && rc.canHireGardener(randomDirection())) {
-                    System.out.println("Archon: buildCooldownTurns: " + rc.getBuildCooldownTurns());
                     Direction dir = randomDirection();
-                    System.out.println("Before if: buildCooldownTurns: " + rc.getBuildCooldownTurns());
                     if (rc.getBuildCooldownTurns() == 0 && rc.canHireGardener(dir)) {
-                        System.out.println("Before: buildCooldownTurns: " + rc.getBuildCooldownTurns());
                         rc.hireGardener(dir);
-                        System.out.println("After: buildCooldownTurns: " + rc.getBuildCooldownTurns());
                     }
-
-                    moveAwayFromIncomingBullets();
-
+                    System.out.println("Arch D0: getroundnum : " + rc.getRoundNum());
+                    dodge();
+                    System.out.println("Arch D1: getroundnum : " + rc.getRoundNum());
+                    if (!rc.hasMoved()) wander();
+                    System.out.println("Arch D2: getroundnum : " + rc.getRoundNum());
                 }
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
@@ -144,11 +142,13 @@ public strictfp class RobotPlayer {
                         rc.buildRobot(RobotType.LUMBERJACK, dir);
                     }
 
-                    // Move randomly
-                    //tryMove(dir);
-                    moveAwayFromIncomingBullets();
-
                 }
+
+                System.out.println("Gardener G0: getroundnum : " + rc.getRoundNum());
+                dodge();
+                System.out.println("Gardener G1: getroundnum : " + rc.getRoundNum());
+                if (!rc.hasMoved()) wander();
+                System.out.println("Gardener G2: getroundnum : " + rc.getRoundNum());
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
 
@@ -168,7 +168,8 @@ public strictfp class RobotPlayer {
 
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
-                MapLocation myLocation = rc.getLocation();
+
+                dodge();
 
                 // See if there are any nearby enemy robots
                 RobotInfo[] robots = rc.senseNearbyRobots(-1, enemy);
@@ -185,10 +186,6 @@ public strictfp class RobotPlayer {
                         rc.fireSingleShot(rc.getLocation().directionTo(robots[0].location));
                     }
                 }
-
-                // Move randomly
-                //tryMove(randomDirection());
-                moveAwayFromIncomingBullets();
 
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
@@ -209,6 +206,7 @@ public strictfp class RobotPlayer {
 
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
+                dodge();
 
                 // See if there are any enemy robots within striking range (distance 1 from lumberjack's radius)
                 RobotInfo[] robots = rc.senseNearbyRobots(RobotType.LUMBERJACK.bodyRadius+GameConstants.LUMBERJACK_STRIKE_RADIUS, enemy);
@@ -302,23 +300,27 @@ public strictfp class RobotPlayer {
         return false;
     }
 
-    /**
-     * Attempts to move away from incoming bullets
-     *
-     * @return true if a move was performed
-     * @throws GameActionException
-     */
-    static boolean moveAwayFromIncomingBullets() throws GameActionException {
-        BulletInfo[] bullets = rc.senseNearbyBullets();
-        for(BulletInfo a_bullet: bullets)
-            if (willCollideWithMe(a_bullet)) {
-                Direction possible_dir1 = a_bullet.getDir().rotateLeftDegrees(120);
-                Direction possible_dir2 = a_bullet.getDir().rotateRightDegrees(120);
-                if (tryMove(possible_dir1) || tryMove(possible_dir2)) return true;
-            }
+    static boolean trySidestep(BulletInfo bullet) throws GameActionException{
 
-        if (tryMove(randomDirection())) return true;
-        return false;
+        Direction towards = bullet.getDir();
+        //MapLocation leftGoal = rc.getLocation().add(towards.rotateLeftDegrees(90), rc.getType().bodyRadius);
+        //MapLocation rightGoal = rc.getLocation().add(towards.rotateRightDegrees(90), rc.getType().bodyRadius);
+        return(tryMove(towards.rotateRightDegrees(90)) || tryMove(towards.rotateLeftDegrees(90)));
+    }
+
+    static void dodge() throws GameActionException {
+        BulletInfo[] bullets = rc.senseNearbyBullets();
+        for (BulletInfo bi : bullets) {
+            if (willCollideWithMe(bi)) {
+                if (trySidestep(bi)) return;
+            }
+        }
+        wander();
+    }
+
+    public static void wander() throws GameActionException {
+        Direction dir = randomDirection();
+        tryMove(dir);
     }
 
     /**
@@ -377,7 +379,6 @@ public strictfp class RobotPlayer {
             System.out.println("calculateMapLength Exception");
             e.printStackTrace();
         }
-
     }
 }
 
