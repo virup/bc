@@ -5,14 +5,11 @@ public strictfp class RobotPlayer {
     static RobotController rc;
 
     static int fieldSize = 0;
-    static boolean isFieldSizeKnown = false;
-    static float distanceUp = 0;
-    static float distanceDown = 0;
-    static float mapLength = 0;
+    static boolean isMapLengthKnown = false;
+    static float distanceShifted = 0;
+    static float mapSideLength = 0;
     static MapLocation initPosition;
     static boolean isInitArchPositionSaved = false;
-    static boolean reachedTopMostPoint = false;
-    static boolean reachedBottomMostPoint = false;
 
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
@@ -64,9 +61,12 @@ public strictfp class RobotPlayer {
                     isInitArchPositionSaved = true;
                 }
 
-                if (!isFieldSizeKnown) {
+                if (!isMapLengthKnown) {
                     // does not take care of objects in the way!
-                    calculateMapLength();
+                    if (initPosition.y > initPosition.x)
+                        calculateMapLength(Direction.getNorth());
+                    else
+                        calculateMapLength(Direction.getEast());
                 }
                 else {
 
@@ -87,8 +87,7 @@ public strictfp class RobotPlayer {
                     //System.out.println("tryMove in opposite direction...");
                     //tryMove(dir.opposite());
 
-                    System.out.println("distanceUp=" + distanceUp + ", distanceDown="+distanceDown);
-                    System.out.println("mapLength: " + mapLength);
+                    System.out.println("mapLength: " + mapSideLength);
                 }
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
@@ -100,31 +99,22 @@ public strictfp class RobotPlayer {
     }
 
     /**
-     * Method to calculate the map length
-     *
+     * Method to calculate the map length.
+     * Takes into account if the initial Archon's position's X coordinate is bigger than the Y coordinate (or vice-versa)
      * @throws GameActionException
      */
-    static void calculateMapLength() throws GameActionException {
+    static void calculateMapLength(Direction dir) throws GameActionException {
         try {
-            if (!reachedTopMostPoint && !rc.hasMoved() && rc.canMove(Direction.getNorth())) {
-                rc.move(Direction.getNorth());
-            }
-            // else, try to move around the obstacle
+            if (!rc.hasMoved() && rc.canMove(dir)) rc.move(dir);
             else {
-                if(!reachedTopMostPoint) {
-                    distanceUp = rc.getLocation().distanceTo(initPosition);
-                    reachedTopMostPoint = true;
+                distanceShifted = rc.getLocation().distanceTo(initPosition);
+                float initDistFromOrigin;
+                float currDistFromOrigin;
 
-                }
-                if (!reachedBottomMostPoint && !rc.hasMoved() && rc.canMove(Direction.getSouth())) {
-                    rc.move(Direction.getSouth());
-                }
-                else {
-                    distanceDown = rc.getLocation().distanceTo(initPosition) + 2*RobotType.ARCHON.bodyRadius;
-                    mapLength = distanceUp + distanceDown;
-                    reachedBottomMostPoint = true;
-                    isFieldSizeKnown = true;
-                }
+                if (dir.equals(Direction.getEast())) initDistFromOrigin = initPosition.x;
+                else initDistFromOrigin = initPosition.y;
+                mapSideLength = initDistFromOrigin + distanceShifted + RobotType.ARCHON.bodyRadius;
+                isMapLengthKnown = true;
             }
             //Clock.yield();
         } catch (Exception e) {
