@@ -14,7 +14,7 @@ public strictfp class RobotPlayer {
     static int GARDENER_X_CHANNEL = 106;
     static int GARDENER_Y_CHANNEL = 107;
 
-    static int NUM_OF_GARDENERS = 4; // Maximum number of gardeners that are alive
+    static int NUM_OF_GARDENERS = 3; // Maximum number of gardeners that are alive
 
     // will use these constants to assign a soldier to follow 2 gardeners for now
     // in case a gardener gets killed, will need to reassign the soldier
@@ -107,6 +107,7 @@ public strictfp class RobotPlayer {
     }
 
     static void isMainGardenerCheck() throws GameActionException {
+
         // A Gardener starts at 100 HP
         if (rc.readBroadcast(MAIN_GARDENER_CHANNEL) == 0 && rc.getHealth() >= 50) {
             rc.broadcast(MAIN_GARDENER_CHANNEL, rc.getID());
@@ -147,7 +148,6 @@ public strictfp class RobotPlayer {
                 isCloseToBeingKilled(); // check method definition above
                 buildGuards(); // guards for archon and main gardener
 
-                /*
 
                 Direction dir = randomDirection();
 
@@ -157,6 +157,7 @@ public strictfp class RobotPlayer {
                     rc.buildRobot(RobotType.LUMBERJACK, dir);
                 }
 
+                /*
                 if (rc.canInteractWithTree(rc.getLocation()) && rc.canWater(rc.getLocation())) {
                     rc.water(rc.getLocation());
                 }
@@ -193,13 +194,13 @@ public strictfp class RobotPlayer {
     static void buildGuards() throws GameActionException {
 
         float teamBullets = rc.getTeamBullets();
-        float minBullets = 3/2*RobotType.SOLDIER.bulletCost;
+        float minBullets = 3/2 * RobotType.SOLDIER.bulletCost;
 
         if (teamBullets >= minBullets && rc.readBroadcast(ARCHON_GUARD_CHANNEL) == 0) {
             buildSoldierImmediately();
         }
 
-        if (teamBullets >= minBullets && rc.readBroadcast(MAIN_GARDENER_CHANNEL) == 0) {
+        if (teamBullets >= minBullets && rc.readBroadcast(GARDENER_GUARD_CHANNEL) == 0) {
             buildSoldierImmediately();
         }
     }
@@ -220,29 +221,32 @@ public strictfp class RobotPlayer {
     // name change ?
     static void helperAssignGuards(int robotType) throws GameActionException {
 
-        int channel;
-        int channelLocX;
-        int channelLocY;
+        int guardID;
+        int targetX;
+        int targetY;
 
         if (robotType == 1) {
-            channel = ARCHON_GUARD_CHANNEL;
-            channelLocX = ARCHON_X_CHANNEL;
-            channelLocY = ARCHON_Y_CHANNEL;
+            guardID = ARCHON_GUARD_CHANNEL;
+            targetX = ARCHON_X_CHANNEL;
+            targetY = ARCHON_Y_CHANNEL;
         }
         else {
-            channel = GARDENER_GUARD_CHANNEL;
-            channelLocX = GARDENER_X_CHANNEL;
-            channelLocY = GARDENER_Y_CHANNEL;
+            guardID = GARDENER_GUARD_CHANNEL;
+            targetX = GARDENER_X_CHANNEL;
+            targetY = GARDENER_Y_CHANNEL;
         }
 
-        if (rc.getID() == rc.readBroadcast(channel)) {
+        System.out.println("rc.getID(): " + rc.getID() + ", rc.readBroadcast(guardID): " + rc.readBroadcast(guardID));
+
+        if (rc.getID() == rc.readBroadcast(guardID)) {
             if (rc.getHealth() < 20.0) {
-                rc.broadcast(channel, 0); // assign a new soldier to protect archon
+                rc.broadcast(guardID, 0); // assign a new soldier to protect archon
             }
             else {
-                int xPos = rc.readBroadcast(channelLocX);
-                int yPos = rc.readBroadcast(channelLocY);
-                follow(xPos, yPos); // follow the archon/gardener protect it
+                int xPos = rc.readBroadcast(targetX);
+                int yPos = rc.readBroadcast(targetY);
+                System.out.println("xPos: " + xPos + ", yPos: " + yPos);
+                follow(xPos, yPos, robotType); // follow the archon/gardener protect it
             }
         }
     }
@@ -259,18 +263,31 @@ public strictfp class RobotPlayer {
         return false;
     }
 
-    static void assignGuards() throws GameActionException {
-        float minSoldierHealth = 40; // random pick, max HP of a soldier is 50
-
+    static void initGuards() throws GameActionException {
         // one soldier can guard either the archon or main gardener
-        if (!anActiveArchonGuard() && rc.getHealth() >= minSoldierHealth) {
+        float minSoldierHealth = 40; // random pick, max HP of a soldier is 50
+        int archonGuardId = rc.readBroadcast(ARCHON_GUARD_CHANNEL);
+        int gardenerGuardId = rc.readBroadcast(GARDENER_GUARD_CHANNEL);
+        int myId = rc.getID();
+
+        if (!anActiveArchonGuard() && rc.getHealth() >= minSoldierHealth && myId != gardenerGuardId) {
+            System.out.println("ARCHON_GUARD: " + rc.getID());
             rc.broadcast(ARCHON_GUARD_CHANNEL, rc.getID());
-            helperAssignGuards(1);
         }
-        else if (!anActiveGardenerGuard() && rc.getHealth() >= minSoldierHealth) {
+        else if (!anActiveGardenerGuard() && rc.getHealth() >= minSoldierHealth && myId != archonGuardId) {
+            System.out.println("GARDENER_GUARD: " + rc.getID());
             rc.broadcast(GARDENER_GUARD_CHANNEL, rc.getID());
-            helperAssignGuards(2);
         }
+    }
+
+    static void performGuardTask() throws GameActionException {
+        int archonGuardId = rc.readBroadcast(ARCHON_GUARD_CHANNEL);
+        int gardenerGuardId = rc.readBroadcast(GARDENER_GUARD_CHANNEL);
+        int myId = rc.getID();
+
+        initGuards();
+        if (myId == archonGuardId) helperAssignGuards(1);
+        else if (myId == gardenerGuardId) helperAssignGuards(2);
 
     }
 
@@ -299,7 +316,7 @@ public strictfp class RobotPlayer {
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
 
-                assignGuards();
+                performGuardTask();
                 if (!rc.hasAttacked()) soldierAttack();
                 if (!rc.hasMoved()) wander();
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
@@ -354,13 +371,21 @@ public strictfp class RobotPlayer {
     /**
      * Try to follow another robot which is currently at (x, y) location on the map
      */
-    static void follow(int target_x, int target_y) throws GameActionException {
+    static void follow(int target_x, int target_y, int robotType) throws GameActionException {
         try {
             MapLocation targetLocation = new MapLocation(target_x, target_y);
             MapLocation myLocation = rc.getLocation();
-            if(myLocation.isWithinDistance(targetLocation, 2*RobotType.ARCHON.bodyRadius))
+            System.out.println("myLocation = " + myLocation);
+            System.out.println("In follow: target_x = " + target_x + ", target_y = " + target_y + ", robotType: " + robotType);
+
+            float distance = (robotType == 1) ? RobotType.ARCHON.bodyRadius : RobotType.GARDENER.bodyRadius;
+            System.out.println("distance = " + distance);
+
+            if (myLocation.isWithinDistance(targetLocation, 2*distance))
                 return;
+
             tryMove(myLocation.directionTo(targetLocation), 30, 6);
+
         } catch (Exception e) {
             e.printStackTrace();
         }

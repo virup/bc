@@ -22,22 +22,28 @@ Welcome to battlecode!
 [server] examplefuncsplayer vs. Defend on shrine
 [A:ARCHON#0@1] I'm an archon!
 [B:ARCHON#1@1] I'm an archon!
-[B:GARDENER#11993@13] I'm a gardener!
-[B:SOLDIER#12386@34] I'm an soldier!
-[B:SOLDIER#11666@44] I'm an soldier!
-[B:SOLDIER#11439@109] I'm an soldier!
-[B:SOLDIER#10663@178] I'm an soldier!
-[B:SOLDIER#10499@247] I'm an soldier!
-[B:SOLDIER#10790@316] I'm an soldier!
-[B:SOLDIER#11788@385] I'm an soldier!
-[B:SOLDIER#13805@517] I'm an soldier!
-[server]                     Defend (B) wins (round 592)
+[B:GARDENER#11993@7] I'm a gardener!
+[B:SOLDIER#12386@28] I'm an soldier!
+ARCHON_GUARD: 12386
+rc.getID(): 12386, rc.readBroadcast(guardID): 12386
+xPos: 28, yPos: 27
+myLocation = [24.983419, 10.726356]
+In follow: target_x = 28, target_y = 27, robotType: 1
+distance = 2.0
+[B:SOLDIER#11666@38] I'm an soldier!
+GARDENER_GUARD: 11666
+rc.getID(): 11666, rc.readBroadcast(guardID): 11666
+xPos: 0, yPos: 0
+myLocation = [13.786833, 9.206866]
+In follow: target_x = 0, target_y = 0, robotType: 2
+distance = 1.0
+[server]                     Defend (B) wins (round 1494)
 [server] Reason: The winning team won by destruction.
 [server] -------------------- Match Finished --------------------
-[server:debug] match completed in 0.6030 seconds
+[server:debug] match completed in 0.6630 seconds
 [server:debug] Awaiting match
 [server:debug] Shutting down server
 
 BUILD SUCCESSFUL
 
-Total time: 8.092 secs
+Total time: 7.451 secs

@@ -41,7 +41,7 @@ public strictfp class RobotPlayer {
 
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
-                /*
+
                 // Generate a random direction
                 Direction dir = randomDirection();
 
@@ -52,7 +52,7 @@ public strictfp class RobotPlayer {
 
                 // Move randomly
                 tryMove(randomDirection());
-                */
+
                 // Broadcast archon's location for other robots on the team to know
                 MapLocation myLocation = rc.getLocation();
                 rc.broadcast(0,(int)myLocation.x);
