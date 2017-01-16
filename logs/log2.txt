@@ -23,25 +23,21 @@ Welcome to battlecode!
 [A:ARCHON#0@1] I'm an archon!
 [B:ARCHON#1@1] I'm an archon!
 [B:GARDENER#11993@13] I'm a gardener!
-runGardener = 0
-after calling buildSoldierImmediately...
 [B:SOLDIER#12386@34] I'm an soldier!
-[B:SOLDIER#11666@57] I'm an soldier!
-[B:SOLDIER#10499@226] I'm an soldier!
-[B:GARDENER#10790@284] I'm a gardener!
-[B:SOLDIER#12983@389] I'm an soldier!
-[B:SOLDIER#10168@433] I'm an soldier!
-[B:SOLDIER#11218@556] I'm an soldier!
-B's TANK 14092 at location [15.000000, 15.000000] died in round 828 because it returned from its run() method!
-[B:SOLDIER#11906@839] I'm an soldier!
-[B:SOLDIER#13985@1002] I'm an soldier!
-[server]                     Defend (B) wins (round 1078)
+[B:SOLDIER#11666@44] I'm an soldier!
+[B:SOLDIER#11439@109] I'm an soldier!
+[B:SOLDIER#10663@178] I'm an soldier!
+[B:SOLDIER#10499@247] I'm an soldier!
+[B:SOLDIER#10790@316] I'm an soldier!
+[B:SOLDIER#11788@385] I'm an soldier!
+[B:SOLDIER#13805@517] I'm an soldier!
+[server]                     Defend (B) wins (round 592)
 [server] Reason: The winning team won by destruction.
 [server] -------------------- Match Finished --------------------
-[server:debug] match completed in 0.8480 seconds
+[server:debug] match completed in 0.6030 seconds
 [server:debug] Awaiting match
 [server:debug] Shutting down server
 
 BUILD SUCCESSFUL
 
-Total time: 35.677 secs
+Total time: 8.092 secs

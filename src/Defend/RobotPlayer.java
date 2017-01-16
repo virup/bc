@@ -145,15 +145,11 @@ public strictfp class RobotPlayer {
 
                 isMainGardenerCheck(); // check method definition above
                 isCloseToBeingKilled(); // check method definition above
+                buildGuards(); // guards for archon and main gardener
+
+                /*
 
                 Direction dir = randomDirection();
-
-                if (rc.readBroadcast(ARCHON_GUARD_CHANNEL) == 0 && rc.getTeamBullets() >= 2*RobotType.SOLDIER.bulletCost) {
-                    System.out.println("runGardener = " + rc.readBroadcast(ARCHON_GUARD_CHANNEL));
-                    buildSoldierImmediately();
-                    System.out.println("after calling buildSoldierImmediately...");
-
-                }
 
                 if (rc.canBuildRobot(RobotType.SOLDIER, dir) && Math.random() < .01) {
                     rc.buildRobot(RobotType.SOLDIER, dir);
@@ -178,6 +174,7 @@ public strictfp class RobotPlayer {
                     }
 
                 }
+                */
 
                 if (!rc.hasMoved()) {
                     wander();
@@ -194,39 +191,59 @@ public strictfp class RobotPlayer {
     }
 
     static void buildGuards() throws GameActionException {
-        int count = 0;
-//        System.out.println("buildSoldierImmediately...");
-//        System.out.println("rc.getHealth() " + rc.getHealth());
-//        System.out.println("bullets " + rc.getTeamBullets());
 
         float teamBullets = rc.getTeamBullets();
         float minBullets = 3/2*RobotType.SOLDIER.bulletCost;
 
         if (teamBullets >= minBullets && rc.readBroadcast(ARCHON_GUARD_CHANNEL) == 0) {
-//                System.out.println("runGardener = " + rc.readBroadcast(ARCHON_GUARD_CHANNEL));
-                buildSoldierImmediately();
-//                System.out.println("after calling buildSoldierImmediately...");
+            buildSoldierImmediately();
         }
 
         if (teamBullets >= minBullets && rc.readBroadcast(MAIN_GARDENER_CHANNEL) == 0) {
-                buildSoldierImmediately();
+            buildSoldierImmediately();
         }
     }
 
     static void buildSoldierImmediately() throws GameActionException {
         int count = 0;
-//        System.out.println("buildSoldierImmediately...");
-//        System.out.println("rc.getHealth() " + rc.getHealth());
-//        System.out.println("bullets " + rc.getTeamBullets());
         Direction dir = randomDirection();
         while (count < 4) {
             if (rc.canBuildRobot(RobotType.SOLDIER, dir)) {
-//                System.out.println("canBuildRobot...");
                 rc.buildRobot(RobotType.SOLDIER, dir);
                 break;
             }
             dir = dir.rotateLeftDegrees(90);
             count++;
+        }
+    }
+
+    // name change ?
+    static void helperAssignGuards(int robotType) throws GameActionException {
+
+        int channel;
+        int channelLocX;
+        int channelLocY;
+
+        if (robotType == 1) {
+            channel = ARCHON_GUARD_CHANNEL;
+            channelLocX = ARCHON_X_CHANNEL;
+            channelLocY = ARCHON_Y_CHANNEL;
+        }
+        else {
+            channel = GARDENER_GUARD_CHANNEL;
+            channelLocX = GARDENER_X_CHANNEL;
+            channelLocY = GARDENER_Y_CHANNEL;
+        }
+
+        if (rc.getID() == rc.readBroadcast(channel)) {
+            if (rc.getHealth() < 20.0) {
+                rc.broadcast(channel, 0); // assign a new soldier to protect archon
+            }
+            else {
+                int xPos = rc.readBroadcast(channelLocX);
+                int yPos = rc.readBroadcast(channelLocY);
+                follow(xPos, yPos); // follow the archon/gardener protect it
+            }
         }
     }
 
@@ -243,36 +260,38 @@ public strictfp class RobotPlayer {
     }
 
     static void assignGuards() throws GameActionException {
+        float minSoldierHealth = 40; // random pick, max HP of a soldier is 50
 
-        // why rc.getHealth() >= 50.0 ? review...new robot ?
-        if (!anActiveArchonGuard() && rc.getHealth() >= 50.0) {
+        // one soldier can guard either the archon or main gardener
+        if (!anActiveArchonGuard() && rc.getHealth() >= minSoldierHealth) {
             rc.broadcast(ARCHON_GUARD_CHANNEL, rc.getID());
+            helperAssignGuards(1);
         }
-        else if (!anActiveGardenerGuard() && rc.getHealth() >= 50.0) {
+        else if (!anActiveGardenerGuard() && rc.getHealth() >= minSoldierHealth) {
             rc.broadcast(GARDENER_GUARD_CHANNEL, rc.getID());
+            helperAssignGuards(2);
         }
 
-        if (rc.getID() == rc.readBroadcast(ARCHON_GUARD_CHANNEL)) {
-//                    System.out.println("I'm Archon's protector: " + rc.getID());
-//                    System.out.println("I'm Archon's protector: rc.getHealth() " + rc.getHealth());
+    }
 
-            if (rc.getHealth() < 20.0) {
-//                        System.out.println("Setting ARCHON_GUARD_CHANNEL to 0...");
-                rc.broadcast(ARCHON_GUARD_CHANNEL, 0); // assign a new soldier to protect archon
-            }
-            // Listen for home archon's location
-            else {
-//                        System.out.println("Else.. rc.getHealth() " + rc.getHealth());
-                int xPos = rc.readBroadcast(ARCHON_X_CHANNEL);
-                int yPos = rc.readBroadcast(ARCHON_Y_CHANNEL);
-                follow(xPos, yPos); // go towards Archon to protect it
+    static void soldierAttack() throws GameActionException {
+        Team enemy = rc.getTeam().opponent();
+        // changed the chase code...do not run after the attacker
+        RobotInfo[] robots = rc.senseNearbyRobots(-1, enemy);
+
+        // If there are some...
+        if (robots.length > 0) {
+            // And we have enough bullets, and haven't attacked yet this turn...
+            if (rc.canFireSingleShot()) {
+                // ...Then fire a bullet in the direction of the enemy.
+                rc.fireSingleShot(rc.getLocation().directionTo(robots[0].location));
             }
         }
+
     }
 
     static void runSoldier() throws GameActionException {
         System.out.println("I'm an soldier!");
-        Team enemy = rc.getTeam().opponent();
 
         // The code you want your robot to perform every round should be in this loop
         while (true) {
@@ -281,19 +300,8 @@ public strictfp class RobotPlayer {
             try {
 
                 assignGuards();
-
-                // changed the chase code...do not run after the attacker
-                RobotInfo[] robots = rc.senseNearbyRobots(-1, enemy);
-
-                // If there are some...
-                if (robots.length > 0) {
-                    // And we have enough bullets, and haven't attacked yet this turn...
-                    if (rc.canFireSingleShot()) {
-                        // ...Then fire a bullet in the direction of the enemy.
-                        rc.fireSingleShot(rc.getLocation().directionTo(robots[0].location));
-                    }
-                }
-
+                if (!rc.hasAttacked()) soldierAttack();
+                if (!rc.hasMoved()) wander();
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
 
