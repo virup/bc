@@ -9,6 +9,8 @@ public strictfp class RobotPlayer {
     static int ARCHON_Y_CHANNEL = 101;
     static int GARDENER_NUMBER_CHANNEL = 102;
     static int PROTECTOR_NUMBER_CHANNEL = 103; // stores ID of Archon's protector
+    //static int PROTECTOR2_NUMBER_CHANNEL = 104; // stores ID of Archon's protector
+
     static int NUM_OF_GARDENERS = 4;
 
     // will use these constants to assign a soldier to follow 2 gardeners for now
@@ -115,10 +117,6 @@ public strictfp class RobotPlayer {
                     rc.broadcast(GARDENER_NUMBER_CHANNEL, currGardeners - 1);
                 }
 
-                // Listen for home archon's location
-                int xPos = rc.readBroadcast(ARCHON_X_CHANNEL);
-                int yPos = rc.readBroadcast(ARCHON_Y_CHANNEL);
-                System.out.println("rc.getID() = " + rc.getID());
                 Direction dir = randomDirection();
 
                 int protectorID = rc.readBroadcast(PROTECTOR_NUMBER_CHANNEL);
@@ -127,18 +125,12 @@ public strictfp class RobotPlayer {
                     Clock.yield(); // review
                 }
 
-                if (rc.canBuildRobot(RobotType.SOLDIER, dir) && Math.random() < .5) {
+                if (rc.canBuildRobot(RobotType.SOLDIER, dir) && Math.random() < .2) {
                     rc.buildRobot(RobotType.SOLDIER, dir);
                 } else if (rc.canBuildRobot(RobotType.LUMBERJACK, dir) && Math.random() < .1 && rc.isBuildReady()) {
                     rc.buildRobot(RobotType.LUMBERJACK, dir);
                 }
 
-                follow(xPos, yPos);
-                if (!rc.hasMoved()) {
-                    wander();
-                }
-
-                /*
                 if (rc.canInteractWithTree(rc.getLocation()) && rc.canWater(rc.getLocation())) {
                     rc.water(rc.getLocation());
                 }
@@ -156,7 +148,10 @@ public strictfp class RobotPlayer {
                     }
 
                 }
-                */
+
+                if (!rc.hasMoved()) {
+                    wander();
+                }
 
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
@@ -202,9 +197,16 @@ public strictfp class RobotPlayer {
                 }
 
                 if (rc.getID() == rc.readBroadcast(PROTECTOR_NUMBER_CHANNEL)) {
-                    int xPos = rc.readBroadcast(ARCHON_X_CHANNEL);
-                    int yPos = rc.readBroadcast(ARCHON_Y_CHANNEL);
-                    follow(xPos, yPos); // go towards Archon to protect it
+
+                    if (rc.getHealth() < 20) {
+                        rc.broadcast(PROTECTOR_NUMBER_CHANNEL, 0); // assign a new soldier to protect archon
+                    }
+                    // Listen for home archon's location
+                    else {
+                        int xPos = rc.readBroadcast(ARCHON_X_CHANNEL);
+                        int yPos = rc.readBroadcast(ARCHON_Y_CHANNEL);
+                        follow(xPos, yPos); // go towards Archon to protect it
+                    }
                 }
 
 
@@ -282,7 +284,11 @@ public strictfp class RobotPlayer {
      */
     static void follow(int target_x, int target_y) throws GameActionException {
         try {
-            tryMove(rc.getLocation().directionTo(new MapLocation(target_x, target_y)));
+            MapLocation targetLocation = new MapLocation(target_x, target_y);
+            MapLocation myLocation = rc.getLocation();
+            if(myLocation.isWithinDistance(targetLocation, 2*RobotType.ARCHON.bodyRadius))
+                return;
+            tryMove(myLocation.directionTo(targetLocation));
         } catch (Exception e) {
             e.printStackTrace();
         }
