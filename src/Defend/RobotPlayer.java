@@ -2,6 +2,8 @@ package Defend;
 
 import battlecode.common.*;
 
+import java.util.Map;
+
 public strictfp class RobotPlayer {
 
     static RobotController rc;
@@ -15,25 +17,6 @@ public strictfp class RobotPlayer {
     static int GARDENER_Y_CHANNEL = 107;
 
     static int NUM_OF_GARDENERS = 3; // Maximum number of gardeners that are alive
-
-    // will use these constants to assign a soldier to follow 2 gardeners for now
-    // in case a gardener gets killed, will need to reassign the soldier
-    // same if a soldier gets killed
-//    static int GARDENER1_ID_CHANNEL = 200;
-//    static int GARDENER1_X_CHANNEL = 201;
-//    static int GARDENER1_Y_CHANNEL = 202;
-//    static int GARDENER2_ID_CHANNEL = 203;
-//    static int GARDENER2_X_CHANNEL = 204;
-//    static int GARDENER2_Y_CHANNEL = 205;
-
-    /*
-    static int PROTECTOR_1_ID_CHANNEL = 102;
-    static int PROTECTOR_2_ID_CHANNEL = 103;
-    static int PROTECTOR_3_ID_CHANNEL = 104;
-    static int PROTECTOR_4_ID_CHANNEL = 105;
-    */
-    //static int[] PROTECTOR_IDS = {PROTECTOR_1_ID_CHANNEL, PROTECTOR_2_ID_CHANNEL, PROTECTOR_3_ID_CHANNEL, PROTECTOR_4_ID_CHANNEL};
-
 
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
@@ -74,10 +57,10 @@ public strictfp class RobotPlayer {
             try {
 
                 // Broadcast archon's location for other robots on the team to know
+                /*
                 MapLocation myLocation = rc.getLocation();
                 rc.broadcast(ARCHON_X_CHANNEL, (int)myLocation.x);
                 rc.broadcast(ARCHON_Y_CHANNEL, (int)myLocation.y);
-
                 if (Math.random() < .01 && rc.getBuildCooldownTurns() == 0 && rc.readBroadcast(GARDENER_NUMBER_CHANNEL) < NUM_OF_GARDENERS) {
                     Direction dir = randomDirection();
                     int tryCount = 0;
@@ -93,10 +76,46 @@ public strictfp class RobotPlayer {
                         tryCount++;
                     }
                 }
+                */
 
+                /*
                 if (!rc.hasMoved()) {
                     wander();
                 }
+                */
+                int check = 0;
+                Direction dir = Direction.getNorth();
+
+                /*
+                while (check < 10) {
+                    System.out.println("RoundNum = " + rc.getRoundNum());
+
+                    if (!rc.hasMoved() && rc.canMove(dir)) {
+                        System.out.println("dir = " + dir);
+                        rc.move(dir);
+                        Clock.yield();
+                    }
+                    if (check % 2 == 0) dir = dir.rotateLeftDegrees(60);
+                    else dir = dir.rotateLeftDegrees(-60);
+                    check++;
+                }
+                */
+
+                /*MapLocation currLoc = rc.getLocation();
+                Direction requestedDirection = Direction.getNorth(); // example
+                while (check < 10) {
+                    if (rc.canMove(requestedDirection)) {
+                        if(!rc.hasMoved()) rc.move(requestedDirection);
+                    }
+                    else {
+                        MapLocation newLoc = currLoc.add(requestedDirection, 5);
+                    }
+                    check++;
+                }
+                */
+                tryMoveWithAvoidance(Direction.getNorth().rotateLeftDegrees(45));
+//                tryMoveWithAvoidance(Direction.getSouth());
+
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
             } catch (Exception e) {
@@ -441,6 +460,29 @@ public strictfp class RobotPlayer {
         // A move never happened, so return false.
         return false;
     }
+
+    static void tryMoveWithAvoidance(Direction requestedDirection) throws GameActionException {
+        float degreeOffset = 30;
+        int checksPerSide = 1;
+        float degreesBetween;
+        Direction currDirection = requestedDirection;
+        Direction newDirection;
+        MapLocation currLocation = rc.getLocation();
+
+        while (checksPerSide <= 6) {
+            // tryMove will either continue in current direction (which is initially requestedDirection)
+            // or shift in new direction. Need to calculate the current direction if it moved
+            // can only use map locations
+            if (!rc.hasMoved() && tryMove(currDirection, degreeOffset, checksPerSide)) {
+                newDirection = rc.getLocation().directionTo(currLocation);
+                degreesBetween = newDirection.degreesBetween(currDirection);
+                currDirection = currDirection.rotateLeftDegrees(-1*degreesBetween);
+                currLocation = rc.getLocation();
+            }
+            else checksPerSide++;
+        }
+    }
+
 
     static boolean trySidestep(BulletInfo bullet) throws GameActionException{
 
