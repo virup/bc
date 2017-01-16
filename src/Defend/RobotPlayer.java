@@ -461,15 +461,44 @@ public strictfp class RobotPlayer {
         return false;
     }
 
-    static void tryMoveWithAvoidance(Direction requestedDirection) throws GameActionException {
+    /**
+     * Senses nearby enemy robots or bullets
+     * @return true if enemy robots or bullets can be sensed.
+     * @throws GameActionException
+     */
+    static boolean senseEnemyRobotsAndBullets() throws GameActionException {
+        Team enemy = rc.getTeam().opponent();
+        RobotInfo[] robots = rc.senseNearbyRobots(-1, enemy);
+        BulletInfo[] bullets = rc.senseNearbyBullets(rc.getLocation(), -1);
+        if (robots.length > 0 || bullets.length > 0) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Attempts to move in a given direction, while avoiding obstacles, enemy robots and bullets.
+     * @return true if a move was performed
+     * @param requestedDirection The intended direction of movement
+     * @throws GameActionException
+     */
+
+    static boolean tryMoveWithAvoidance(Direction requestedDirection) throws GameActionException {
         float degreeOffset = 30;
         int checksPerSide = 1;
         float degreesBetween;
         Direction currDirection = requestedDirection;
         Direction newDirection;
         MapLocation currLocation = rc.getLocation();
+        boolean moved = false;
 
         while (checksPerSide <= 6) {
+
+            // if enemy robots or bullets can be sensed, shift course by 30 degrees
+            if (senseEnemyRobotsAndBullets()) {
+                currDirection = currDirection.rotateLeftDegrees(degreeOffset);
+            }
+
             // tryMove will either continue in current direction (which is initially requestedDirection)
             // or shift in new direction. Need to calculate the current direction if it moved
             // can only use map locations
@@ -478,9 +507,11 @@ public strictfp class RobotPlayer {
                 degreesBetween = newDirection.degreesBetween(currDirection);
                 currDirection = currDirection.rotateLeftDegrees(-1*degreesBetween);
                 currLocation = rc.getLocation();
+                moved = true;
             }
             else checksPerSide++;
         }
+        return moved;
     }
 
 
