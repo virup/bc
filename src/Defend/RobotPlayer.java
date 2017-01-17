@@ -11,12 +11,12 @@ public strictfp class RobotPlayer {
     static int ARCHON_Y_CHANNEL = 101; // x coordinate of Archon .. what if there is more than 1 Archon
     static int GARDENER_NUMBER_CHANNEL = 102; // number of gardeners that are alive
     static int ARCHON_GUARD_CHANNEL = 103; // stores ID of Archon's protector
-    static int GARDENER_GUARD_CHANNEL = 104; // stores ID of Gardener's protector
-    static int MAIN_GARDENER_CHANNEL = 105; // stores ID of the designated main gardener to be guarded
+    static int MAIN_GARDENER_CHANNEL = 104; // stores ID of the designated main gardener to be guarded
+    static int GARDENER_GUARD_CHANNEL = 105; // stores ID of Gardener's protector
     static int GARDENER_X_CHANNEL = 106;
     static int GARDENER_Y_CHANNEL = 107;
 
-    static int NUM_OF_GARDENERS = 3; // Maximum number of gardeners that are alive
+    static int NUM_OF_GARDENERS = 1; // Maximum number of gardeners that are alive
 
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
@@ -62,7 +62,7 @@ public strictfp class RobotPlayer {
                 rc.broadcast(ARCHON_X_CHANNEL, (int)myLocation.x);
                 rc.broadcast(ARCHON_Y_CHANNEL, (int)myLocation.y);
 
-                /*
+
                 if (Math.random() < .01 && rc.getBuildCooldownTurns() == 0 && rc.readBroadcast(GARDENER_NUMBER_CHANNEL) < NUM_OF_GARDENERS) {
                     Direction dir = randomDirection();
                     int tryCount = 0;
@@ -79,7 +79,7 @@ public strictfp class RobotPlayer {
                     }
                 }
 
-                */
+
 
                 //if (!rc.hasMoved()) {
                 //    wander();
@@ -118,7 +118,7 @@ public strictfp class RobotPlayer {
 //                tryMoveWithAvoidance(Direction.getSouth());
                 */
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
-                tryMoveInStraightLine((float)(3*Math.PI/4));
+                //tryMoveInStraightLine((float)(3*Math.PI/4));
                 Clock.yield();
             } catch (Exception e) {
                 System.out.println("Archon Exception");
@@ -129,8 +129,8 @@ public strictfp class RobotPlayer {
 
     static void isMainGardenerCheck() throws GameActionException {
 
-        // A Gardener starts at 100 HP
-        if (rc.readBroadcast(MAIN_GARDENER_CHANNEL) == 0 && rc.getHealth() >= 50) {
+        // A Gardener starts at 40 HP
+        if (rc.readBroadcast(MAIN_GARDENER_CHANNEL) == 0 && rc.getHealth() >= 30) {
             rc.broadcast(MAIN_GARDENER_CHANNEL, rc.getID());
         }
 
@@ -169,7 +169,7 @@ public strictfp class RobotPlayer {
                 isCloseToBeingKilled(); // check method definition above
                 buildGuards(); // guards for archon and main gardener
 
-
+                /*
                 Direction dir = randomDirection();
 
                 if (rc.canBuildRobot(RobotType.SOLDIER, dir) && Math.random() < .01) {
@@ -177,6 +177,7 @@ public strictfp class RobotPlayer {
                 } else if (rc.canBuildRobot(RobotType.LUMBERJACK, dir) && Math.random() < .01 && rc.isBuildReady()) {
                     rc.buildRobot(RobotType.LUMBERJACK, dir);
                 }
+                */
 
                 /*
                 if (rc.canInteractWithTree(rc.getLocation()) && rc.canWater(rc.getLocation())) {
@@ -199,7 +200,7 @@ public strictfp class RobotPlayer {
                 */
 
                 if (!rc.hasMoved()) {
-                    wander();
+                    tryMoveInStraightLine((float)(Math.PI * (3/4)));
                 }
 
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
@@ -260,7 +261,7 @@ public strictfp class RobotPlayer {
             targetY = GARDENER_Y_CHANNEL;
         }
 
-        System.out.println("rc.getID(): " + rc.getID() + ", rc.readBroadcast(guardID): " + rc.readBroadcast(guardID));
+        System.out.println("robotType: " + robotType + ", rc.getID(): " + rc.getID() + ", rc.readBroadcast(guardID): " + rc.readBroadcast(guardID));
 
         if (rc.getID() == rc.readBroadcast(guardID)) {
             if (rc.getHealth() < 20.0) {
@@ -269,7 +270,7 @@ public strictfp class RobotPlayer {
             else {
                 int xPos = rc.readBroadcast(targetX);
                 int yPos = rc.readBroadcast(targetY);
-                System.out.println("xPos: " + xPos + ", yPos: " + yPos);
+                System.out.println("robotType:" + robotType + ",xPos: " + xPos + ", yPos: " + yPos);
                 follow(xPos, yPos, robotType); // follow the archon/gardener protect it
             }
         }
