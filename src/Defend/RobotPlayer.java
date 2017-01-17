@@ -401,7 +401,7 @@ public strictfp class RobotPlayer {
             System.out.println("distance = " + distance);
 
             if (myLocation.isWithinDistance(targetLocation, 2*distance))
-                return;
+                tryMoveInACircle(targetLocation);
 
             tryMove(myLocation.directionTo(targetLocation), 30, 6);
 
@@ -419,6 +419,35 @@ public strictfp class RobotPlayer {
      */
     static boolean tryMove(Direction dir) throws GameActionException {
         return tryMove(dir,20,3);
+    }
+
+    /**
+     * Attempts to move in a circle around a center
+     *
+     * @param center Center around which to move
+     * @return true if a move was performed
+     * @throws GameActionException
+     */
+    static boolean tryMoveInACircle(MapLocation center) throws GameActionException {
+        float x_center = center.x;
+        float y_center = center.y;
+        MapLocation currLoc = rc.getLocation();
+        float curr_x = currLoc.x;
+        float curr_y = currLoc.y;
+        float x_shift = (curr_x - x_center);
+        float y_shift = (curr_y - y_center);
+
+        float new_x = (float) (Math.cos(Math.PI/3) * x_shift - Math.sin(Math.PI/3) * y_shift + x_center);
+        float new_y = (float) (Math.sin(Math.PI/3) * x_shift + Math.cos(Math.PI/3) * y_shift + y_center);
+        Direction dir = currLoc.directionTo(new MapLocation(new_x, new_y));
+        if (tryMove(dir,0,1)) return true;
+        else {
+            float new_x2 = (float) (Math.cos(-1*Math.PI/3) * x_shift - Math.sin(-1*Math.PI/3) * y_shift + x_center);
+            float new_y2 = (float) (Math.sin(-1*Math.PI/3) * x_shift + Math.cos(-1*Math.PI/3) * y_shift + y_center);
+            Direction dir2 = currLoc.directionTo(new MapLocation(new_x2, new_y2));
+            if (tryMove(dir2,0,1)) return true;
+        }
+        return false;
     }
 
     /**
@@ -492,7 +521,7 @@ public strictfp class RobotPlayer {
         MapLocation currLocation = rc.getLocation();
         boolean moved = false;
 
-        while (checksPerSide <= 6) {
+        while (checksPerSide <= 3) {
 
             // if enemy robots or bullets can be sensed, shift course by 30 degrees
             if (senseEnemyRobotsAndBullets()) {
@@ -510,6 +539,12 @@ public strictfp class RobotPlayer {
                 moved = true;
             }
             else checksPerSide++;
+        }
+
+        if (!moved) {
+            if (!rc.hasMoved()) {
+                tryMove(currDirection, 90, 2);
+            }
         }
         return moved;
     }
