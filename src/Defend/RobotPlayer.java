@@ -57,10 +57,12 @@ public strictfp class RobotPlayer {
             try {
 
                 // Broadcast archon's location for other robots on the team to know
-                /*
+
                 MapLocation myLocation = rc.getLocation();
                 rc.broadcast(ARCHON_X_CHANNEL, (int)myLocation.x);
                 rc.broadcast(ARCHON_Y_CHANNEL, (int)myLocation.y);
+
+                /*
                 if (Math.random() < .01 && rc.getBuildCooldownTurns() == 0 && rc.readBroadcast(GARDENER_NUMBER_CHANNEL) < NUM_OF_GARDENERS) {
                     Direction dir = randomDirection();
                     int tryCount = 0;
@@ -76,17 +78,16 @@ public strictfp class RobotPlayer {
                         tryCount++;
                     }
                 }
+
                 */
 
+                //if (!rc.hasMoved()) {
+                //    wander();
+                //}
+
                 /*
-                if (!rc.hasMoved()) {
-                    wander();
-                }
-                */
                 int check = 0;
                 Direction dir = Direction.getNorth();
-
-                /*
                 while (check < 10) {
                     System.out.println("RoundNum = " + rc.getRoundNum());
 
@@ -99,9 +100,9 @@ public strictfp class RobotPlayer {
                     else dir = dir.rotateLeftDegrees(-60);
                     check++;
                 }
-                */
 
-                /*MapLocation currLoc = rc.getLocation();
+
+                MapLocation currLoc = rc.getLocation();
                 Direction requestedDirection = Direction.getNorth(); // example
                 while (check < 10) {
                     if (rc.canMove(requestedDirection)) {
@@ -112,11 +113,12 @@ public strictfp class RobotPlayer {
                     }
                     check++;
                 }
-                */
-                tryMoveWithAvoidance(Direction.getNorth().rotateLeftDegrees(45));
-//                tryMoveWithAvoidance(Direction.getSouth());
 
+                //tryMoveWithAvoidance(Direction.getNorth().rotateLeftDegrees(45));
+//                tryMoveWithAvoidance(Direction.getSouth());
+                */
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
+                tryMoveInStraightLine((float)(3*Math.PI/4));
                 Clock.yield();
             } catch (Exception e) {
                 System.out.println("Archon Exception");
@@ -227,13 +229,16 @@ public strictfp class RobotPlayer {
     static void buildSoldierImmediately() throws GameActionException {
         int count = 0;
         Direction dir = randomDirection();
-        while (count < 4) {
-            if (rc.canBuildRobot(RobotType.SOLDIER, dir)) {
-                rc.buildRobot(RobotType.SOLDIER, dir);
-                break;
+
+        if (rc.hasRobotBuildRequirements(RobotType.SOLDIER)) {
+            while (count < 4) {
+                if (rc.canBuildRobot(RobotType.SOLDIER, dir)) {
+                    rc.buildRobot(RobotType.SOLDIER, dir);
+                    break;
+                }
+                dir = dir.rotateLeftDegrees(90);
+                count++;
             }
-            dir = dir.rotateLeftDegrees(90);
-            count++;
         }
     }
 
@@ -394,16 +399,18 @@ public strictfp class RobotPlayer {
         try {
             MapLocation targetLocation = new MapLocation(target_x, target_y);
             MapLocation myLocation = rc.getLocation();
-            System.out.println("myLocation = " + myLocation);
-            System.out.println("In follow: target_x = " + target_x + ", target_y = " + target_y + ", robotType: " + robotType);
+            //System.out.println("myLocation = " + myLocation);
+            //System.out.println("In follow: target_x = " + target_x + ", target_y = " + target_y + ", robotType: " + robotType);
 
             float distance = (robotType == 1) ? RobotType.ARCHON.bodyRadius : RobotType.GARDENER.bodyRadius;
-            System.out.println("distance = " + distance);
+            //System.out.println("distance = " + distance);
 
-            if (myLocation.isWithinDistance(targetLocation, 2*distance))
-                tryMoveInACircle(targetLocation);
+            if (myLocation.isWithinDistance(targetLocation, 3*distance)) {
+                if (!rc.hasMoved()) tryMoveInACircle(targetLocation);
+                return;
+            }
 
-            tryMove(myLocation.directionTo(targetLocation), 30, 6);
+            if (!rc.hasMoved()) tryMove(myLocation.directionTo(targetLocation), 30, 6);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -436,14 +443,15 @@ public strictfp class RobotPlayer {
         float curr_y = currLoc.y;
         float x_shift = (curr_x - x_center);
         float y_shift = (curr_y - y_center);
+        double theta = Math.PI/6;
 
-        float new_x = (float) (Math.cos(Math.PI/3) * x_shift - Math.sin(Math.PI/3) * y_shift + x_center);
-        float new_y = (float) (Math.sin(Math.PI/3) * x_shift + Math.cos(Math.PI/3) * y_shift + y_center);
+        float new_x = (float) (Math.cos(theta) * x_shift - Math.sin(theta) * y_shift + x_center);
+        float new_y = (float) (Math.sin(theta) * x_shift + Math.cos(theta) * y_shift + y_center);
         Direction dir = currLoc.directionTo(new MapLocation(new_x, new_y));
         if (tryMove(dir,0,1)) return true;
         else {
-            float new_x2 = (float) (Math.cos(-1*Math.PI/3) * x_shift - Math.sin(-1*Math.PI/3) * y_shift + x_center);
-            float new_y2 = (float) (Math.sin(-1*Math.PI/3) * x_shift + Math.cos(-1*Math.PI/3) * y_shift + y_center);
+            float new_x2 = (float) (Math.cos(-1*theta) * x_shift - Math.sin(-1*theta) * y_shift + x_center);
+            float new_y2 = (float) (Math.sin(-1*theta) * x_shift + Math.cos(-1*theta) * y_shift + y_center);
             Direction dir2 = currLoc.directionTo(new MapLocation(new_x2, new_y2));
             if (tryMove(dir2,0,1)) return true;
         }
@@ -597,5 +605,16 @@ public strictfp class RobotPlayer {
         return (perpendicularDist <= rc.getType().bodyRadius);
     }
 
+    /**
+     * Attempts to move in a straight line, while avoiding small obstacles direction in the path.
+     *
+     * @param radians The radians at which this direction is facing based off of the unit circle; i.e. facing right would
+     *                have 0.0 radians, up would have PI/2 radians, etc. Note: radians = (-Math.PI, Math.PI]
+     * @return true if a move was performed
+     * @throws GameActionException
+     */
+    static boolean tryMoveInStraightLine(float radians) throws GameActionException {
+        return tryMove(new Direction(radians), 30, 6);
+    }
 }
 
