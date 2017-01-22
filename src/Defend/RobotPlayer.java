@@ -2,11 +2,10 @@ package Defend;
 
 import battlecode.common.*;
 
-import java.util.Map;
-
 public strictfp class RobotPlayer {
 
     static RobotController rc;
+    static int ARCHON1_ID_CHANNEL = 99; // id of the Archon
     static int ARCHON_X_CHANNEL = 100; // x coordinate of Archon .. what if there is more than 1 Archon
     static int ARCHON_Y_CHANNEL = 101; // x coordinate of Archon .. what if there is more than 1 Archon
     static int GARDENER_NUMBER_CHANNEL = 102; // number of gardeners that are alive
@@ -15,8 +14,40 @@ public strictfp class RobotPlayer {
     static int GARDENER_GUARD_CHANNEL = 105; // stores ID of Gardener's protector
     static int GARDENER_X_CHANNEL = 106;
     static int GARDENER_Y_CHANNEL = 107;
+    static int NUM_OF_GARDENERS = 2; // Maximum number of gardeners that are alive
 
-    static int NUM_OF_GARDENERS = 1; // Maximum number of gardeners that are alive
+
+    // archon_id, archon_x, archon_y, current_num_gard, main_gardnr_id, gardnr_x, gardnr_y, arch_guard, gardnr_guard
+    static int[][] ARCHON_CONSTANTS = { {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                        {0, 0, 0, 0, 0, 0, 0, 0, 0},
+                                        {0, 0, 0, 0, 0, 0, 0, 0, 0}
+                                      };
+
+    static void setArchonID() throws GameActionException {
+        System.out.println("initArchon..." + rc.getRoundNum());
+        if (rc.readBroadcast(0) == 0) {
+            rc.broadcast(0, rc.getID());
+        }
+        else if (rc.readBroadcast(10) == 0) {
+            rc.broadcast(10, rc.getID());
+        }
+        else if (rc.readBroadcast(20) == 0) {
+            rc.broadcast(20, rc.getID());
+        }
+    }
+
+    static int checkArchonIndex(int myID) throws GameActionException {
+        if (rc.readBroadcast(0) == myID) {
+            return 0;
+        }
+        else if (rc.readBroadcast(10) == myID) {
+            return 10;
+        }
+        else if (rc.readBroadcast(20) == myID) {
+            return 20;
+        }
+        return -1;
+    }
 
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
@@ -50,6 +81,8 @@ public strictfp class RobotPlayer {
     static void runArchon() throws GameActionException {
         System.out.println("I'm an archon!");
 
+        setArchonID();
+
         // The code you want your robot to perform every round should be in this loop
         while (true) {
 
@@ -58,11 +91,26 @@ public strictfp class RobotPlayer {
 
                 // Broadcast archon's location for other robots on the team to know
 
+                int myID = rc.getID();
+                int archonIndex = checkArchonIndex(myID);
+
                 MapLocation myLocation = rc.getLocation();
-                rc.broadcast(ARCHON_X_CHANNEL, (int)myLocation.x);
-                rc.broadcast(ARCHON_Y_CHANNEL, (int)myLocation.y);
+                rc.broadcast(archonIndex+1, (int)myLocation.x);
+                rc.broadcast(archonIndex+2, (int)myLocation.y);
 
+                System.out.println("Archon, myLocation: " + myLocation);
 
+                Direction dir = randomDirection();
+
+                /*
+                if (rc.canHireGardener(dir)) {
+                    int currGardeners = rc.readBroadcast(archonIndex+3);
+                    rc.broadcast(archonIndex+3, currGardeners+1);
+                    rc.broadcast(archonIndex+4, myID); // stamping ID of hiring Archon in main Gardener's array loc
+                    rc.hireGardener(dir);
+                }
+                */
+                /*
                 if (Math.random() < .01 && rc.getBuildCooldownTurns() == 0 && rc.readBroadcast(GARDENER_NUMBER_CHANNEL) < NUM_OF_GARDENERS) {
                     Direction dir = randomDirection();
                     int tryCount = 0;
@@ -79,7 +127,7 @@ public strictfp class RobotPlayer {
                     }
                 }
 
-
+                */
 
                 //if (!rc.hasMoved()) {
                 //    wander();
@@ -129,6 +177,18 @@ public strictfp class RobotPlayer {
 
     static void isMainGardenerCheck() throws GameActionException {
 
+        int myID = rc.getID();
+
+        /*if (rc.readBroadcast(0) > 0 && rc.readBroadcast(4) == rc.readBroadcast()) {
+            return 0;
+        }
+        else if (rc.readBroadcast(10) == myID) {
+            return 10;
+        }
+        else if (rc.readBroadcast(20) == myID) {
+            return 20;
+        }
+        return -1;
         // A Gardener starts at 40 HP
         if (rc.readBroadcast(MAIN_GARDENER_CHANNEL) == 0 && rc.getHealth() >= 30) {
             rc.broadcast(MAIN_GARDENER_CHANNEL, rc.getID());
@@ -140,6 +200,8 @@ public strictfp class RobotPlayer {
             rc.broadcast(GARDENER_X_CHANNEL, (int)myLocation.x);
             rc.broadcast(GARDENER_Y_CHANNEL, (int)myLocation.y);
         }
+        */
+
     }
 
     static void isCloseToBeingKilled() throws GameActionException {
@@ -164,22 +226,30 @@ public strictfp class RobotPlayer {
 
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
+                MapLocation myLocation = rc.getLocation();
+
+                System.out.println("gardener, myLocation: " + myLocation);
+
+                Direction dir = randomDirection();
+                if (rc.canBuildRobot(RobotType.SOLDIER, dir) && Math.random() < .01) {
+                    rc.buildRobot(RobotType.SOLDIER, dir);
+                }
+
 
                 isMainGardenerCheck(); // check method definition above
                 isCloseToBeingKilled(); // check method definition above
                 buildGuards(); // guards for archon and main gardener
 
-                /*
-                Direction dir = randomDirection();
+
 
                 if (rc.canBuildRobot(RobotType.SOLDIER, dir) && Math.random() < .01) {
                     rc.buildRobot(RobotType.SOLDIER, dir);
                 } else if (rc.canBuildRobot(RobotType.LUMBERJACK, dir) && Math.random() < .01 && rc.isBuildReady()) {
                     rc.buildRobot(RobotType.LUMBERJACK, dir);
                 }
-                */
 
-                /*
+
+
                 if (rc.canInteractWithTree(rc.getLocation()) && rc.canWater(rc.getLocation())) {
                     rc.water(rc.getLocation());
                 }
@@ -197,7 +267,7 @@ public strictfp class RobotPlayer {
                     }
 
                 }
-                */
+
 
                 if (!rc.hasMoved()) {
                     tryMoveInStraightLine((float)(Math.PI * (3/4)));
@@ -261,7 +331,7 @@ public strictfp class RobotPlayer {
             targetY = GARDENER_Y_CHANNEL;
         }
 
-        System.out.println("robotType: " + robotType + ", rc.getID(): " + rc.getID() + ", rc.readBroadcast(guardID): " + rc.readBroadcast(guardID));
+//        System.out.println("robotType: " + robotType + ", rc.getID(): " + rc.getID() + ", rc.readBroadcast(guardID): " + rc.readBroadcast(guardID));
 
         if (rc.getID() == rc.readBroadcast(guardID)) {
             if (rc.getHealth() < 20.0) {
@@ -270,7 +340,7 @@ public strictfp class RobotPlayer {
             else {
                 int xPos = rc.readBroadcast(targetX);
                 int yPos = rc.readBroadcast(targetY);
-                System.out.println("robotType:" + robotType + ",xPos: " + xPos + ", yPos: " + yPos);
+//                System.out.println("robotType:" + robotType + ",xPos: " + xPos + ", yPos: " + yPos);
                 follow(xPos, yPos, robotType); // follow the archon/gardener protect it
             }
         }
@@ -296,23 +366,30 @@ public strictfp class RobotPlayer {
         int myId = rc.getID();
 
         if (!anActiveArchonGuard() && rc.getHealth() >= minSoldierHealth && myId != gardenerGuardId) {
-            System.out.println("ARCHON_GUARD: " + rc.getID());
+//            System.out.println("ARCHON_GUARD: " + rc.getID());
             rc.broadcast(ARCHON_GUARD_CHANNEL, rc.getID());
         }
         else if (!anActiveGardenerGuard() && rc.getHealth() >= minSoldierHealth && myId != archonGuardId) {
-            System.out.println("GARDENER_GUARD: " + rc.getID());
+//            System.out.println("GARDENER_GUARD: " + rc.getID());
             rc.broadcast(GARDENER_GUARD_CHANNEL, rc.getID());
         }
     }
 
-    static void performGuardTask() throws GameActionException {
+    static boolean performGuardTask() throws GameActionException {
         int archonGuardId = rc.readBroadcast(ARCHON_GUARD_CHANNEL);
         int gardenerGuardId = rc.readBroadcast(GARDENER_GUARD_CHANNEL);
         int myId = rc.getID();
 
         initGuards();
-        if (myId == archonGuardId) helperAssignGuards(1);
-        else if (myId == gardenerGuardId) helperAssignGuards(2);
+        if (myId == archonGuardId) {
+            helperAssignGuards(1);
+            return true;
+        }
+        else if (myId == gardenerGuardId) {
+            helperAssignGuards(2);
+            return true;
+        }
+        return false;
 
     }
 
@@ -341,9 +418,19 @@ public strictfp class RobotPlayer {
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
 
-                performGuardTask();
-                if (!rc.hasAttacked()) soldierAttack();
-                if (!rc.hasMoved()) wander();
+                /*
+                if (performGuardTask()) {
+                    if (!rc.hasAttacked()) {
+                        soldierAttack();
+                    }
+                }
+                else {
+                    wander();
+                    if (!rc.hasAttacked()) {
+                        soldierAttack();
+                    }
+                }
+                */
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
 
@@ -406,8 +493,9 @@ public strictfp class RobotPlayer {
             float distance = (robotType == 1) ? RobotType.ARCHON.bodyRadius : RobotType.GARDENER.bodyRadius;
             //System.out.println("distance = " + distance);
 
-            if (myLocation.isWithinDistance(targetLocation, 3*distance)) {
-                if (!rc.hasMoved()) tryMoveInACircle(targetLocation);
+            if (myLocation.isWithinDistance(targetLocation, 2*distance)) {
+                // if (!rc.hasMoved()) tryMoveInACircle(targetLocation);
+                // no need to do this
                 return;
             }
 

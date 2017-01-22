@@ -35,6 +35,7 @@ public strictfp class RobotPlayer {
 
     static void runArchon() throws GameActionException {
         System.out.println("I'm an archon!");
+        boolean canHire = true;
 
         // The code you want your robot to perform every round should be in this loop
         while (true) {
@@ -44,16 +45,17 @@ public strictfp class RobotPlayer {
 
 //                 commenting for testing
                 // Generate a random direction
+
                 Direction dir = randomDirection();
-                /*
+
                 // Randomly attempt to build a gardener in this direction
-                if (rc.canHireGardener(dir) && Math.random() < .01) {
+                if (canHire && rc.canHireGardener(dir) && Math.random() < .01) {
                     rc.hireGardener(dir);
+                    canHire = false;
                 }
 
                 // Move randomly
                 tryMove(randomDirection());
-                */
 
                 // Broadcast archon's location for other robots on the team to know
                 MapLocation myLocation = rc.getLocation();
@@ -73,6 +75,8 @@ public strictfp class RobotPlayer {
 	static void runGardener() throws GameActionException {
         System.out.println("I'm a gardener!");
 
+        int store = 0;
+
         // The code you want your robot to perform every round should be in this loop
         while (true) {
 
@@ -87,12 +91,18 @@ public strictfp class RobotPlayer {
                 // Generate a random direction
                 Direction dir = randomDirection();
 
+                System.out.println("id = " + rc.getID() + ", store = " + store);
+                System.out.println("id = " + rc.getID() + store++);
+
+                /*
                 // Randomly attempt to build a soldier or lumberjack in this direction
                 if (rc.canBuildRobot(RobotType.SOLDIER, dir) && Math.random() < .01) {
                     rc.buildRobot(RobotType.SOLDIER, dir);
                 } else if (rc.canBuildRobot(RobotType.LUMBERJACK, dir) && Math.random() < .01 && rc.isBuildReady()) {
                     rc.buildRobot(RobotType.LUMBERJACK, dir);
                 }
+
+                */
 
                 // Move randomly
                 tryMove(randomDirection());
