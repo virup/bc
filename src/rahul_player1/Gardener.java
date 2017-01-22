@@ -19,7 +19,6 @@ public strictfp class Gardener {
         startPoint = rc.getLocation();
         initialRoundNum = rc.getRoundNum();
         currentDirection = randomDirection();
-
     }
 
     private float getDistanceFromStartingPoint() throws GameActionException {
@@ -32,26 +31,24 @@ public strictfp class Gardener {
     }
 
     // after planting trees on a patch, moves back to water trees after some x number of rounds
-    public boolean shouldTurnBack() throws GameActionException {
+    public boolean turnBackIfRequired() throws GameActionException {
         if (getDistanceFromStartingPoint() > 80 || getRoundsElapsedFromStartingPoint() > 70) {
             startPoint = rc.getLocation();
             initialRoundNum = rc.getRoundNum();
-            currentDirection = opposite(currentDirection);
+            currentDirection = currentDirection.opposite();
             return true;
         }
 
         return false;
     }
 
-    private Direction getCurrentDirection(int id) throws GameActionException {
-        return currentDirection;
+    private Direction getClockwiseRightAngleTo(Direction currentDirection) {
+        return currentDirection.rotateRightDegrees(90f);
     }
 
-    static void plantTree() throws GameActionException {
-        /*
-        which gardener plants which tree,
-        store tree data
-        */
+    public boolean plantTree() throws GameActionException {
+        Direction plantDir = getClockwiseRightAngleTo(currentDirection);
+        if (rc.plantTree(plantDir) && )
 
     }
 
