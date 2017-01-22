@@ -38,7 +38,8 @@ public strictfp class Archon {
     }
 
     // is under attack
-    private void isUnderAttack() {
+    private boolean isUnderAttack() {
+        return false;
     }
 
     private int getNumberOfArchonsOnMap() {
