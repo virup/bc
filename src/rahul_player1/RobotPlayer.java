@@ -1,4 +1,5 @@
 package rahul_player1;
+
 import battlecode.common.*;
 
 public strictfp class RobotPlayer {
@@ -8,6 +9,7 @@ public strictfp class RobotPlayer {
     static int ARCHON_Y = 0;
 
     static int ARCHON_DIRECTION = 1;
+
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
      * If this method returns, the robot dies!
@@ -39,52 +41,29 @@ public strictfp class RobotPlayer {
 
     static void runArchon() throws GameActionException {
         System.out.println("I'm an archon!");
+        int stridesSinceLastGardenerCreate = 10;
         // The code you want your robot to perform every round should be in this loop
         while (true) {
 
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
-
-
-                // Generate a random direction
-                // Direction dir = randomDirection();
+                //Generate a random direction
+                Direction dir = common.randomDirection();
 
                 // Randomly attempt to build a gardener in this direction
-                // if (rc.canHireGardener(dir) && Math.random() < .01) {
-                //    rc.hireGardener(dir);
-                // }
-
-                /*
-                // hire gardener always, will this be expensive to do ?
-                if (rc.canHireGardener(dir)) {
+                if (stridesSinceLastGardenerCreate > 30 && rc.canHireGardener(dir) && Math.random() < .2) {
                     rc.hireGardener(dir);
+                    stridesSinceLastGardenerCreate = 0;
+                } else {
+                    stridesSinceLastGardenerCreate++;
                 }
-                */
 
-                // printing out useful info to track archon's movement
-                //System.out.println("dir.getAngleDegrees: " + dir.getAngleDegrees());
-                //System.out.println("dir.radians: " + dir.radians);
-                //System.out.println("dir.opposite().getAngleDegrees(): " + dir.opposite().getAngleDegrees());
-                //System.out.println("dir: " + dir.);
 
-                // Dodge bullets
-                // Bullet sensing is different from regular sensing. All units have a bullet
-                // sensing range that is larger than their sight range, meaning bullets
-                // can be sensed at a further distance than the units that fire them.
-
-                // Move randomly
-                //boolean didMove = tryMove(dir, 90, 4);
-                //System.out.println(didMove);
-                //tryMoveInARectangle();
-                // Broadcast archon's location for other robots on the team to know
                 tryMoveInARectangle();
-                MapLocation myLocation = rc.getLocation();
-                rc.broadcast(ARCHON_X,(int)myLocation.x);
-                rc.broadcast(ARCHON_Y,(int)myLocation.y);
 
-              //  if (rc.canHireGardener(getArchonDirection()) && Math.random() < .01) {
-              //     rc.hireGardener(getArchonDirection());
-              //  }
+                MapLocation myLocation = rc.getLocation();
+                rc.broadcast(ARCHON_X, (int) myLocation.x);
+                rc.broadcast(ARCHON_Y, (int) myLocation.y);
 
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
@@ -99,36 +78,14 @@ public strictfp class RobotPlayer {
 
     static void runGardener() throws GameActionException {
         System.out.println("I'm a gardener!");
-
+        Gardener me = new Gardener(rc);
         // The code you want your robot to perform every round should be in this loop
         while (true) {
 
-            // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
 
-                // Listen for home archon's location
-                int xPos = rc.readBroadcast(ARCHON_X);
-                int yPos = rc.readBroadcast(ARCHON_Y);
-                MapLocation archonLoc = new MapLocation(xPos,yPos);
+                me.orchestrate();
 
-                // Generate a random direction
-                Direction dir = randomDirection();
-
-                MapLocation archonLocX = new MapLocation(xPos,yPos);
-                MapLocation archonLocY = new MapLocation(xPos,yPos);
-
-
-                if (rc.canPlantTree(dir)) { // Bytecode cost: 10
-                    // don't want the gardener to be stuck in the space between planted trees
-                    rc.plantTree(dir); // Bytecode cost 0
-                    // donate
-                    //exchangeBulletsForVPs();
-                }
-
-                // Move randomly
-                wander();
-
-                // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
 
             } catch (Exception e) {
@@ -162,7 +119,7 @@ public strictfp class RobotPlayer {
                 }
 
                 // Move randomly
-                tryMove(randomDirection());
+                common.tryMove(rc, common.randomDirection());
 
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
@@ -185,25 +142,24 @@ public strictfp class RobotPlayer {
             try {
 
                 // See if there are any enemy robots within striking range (distance 1 from lumberjack's radius)
-                RobotInfo[] robots = rc.senseNearbyRobots(RobotType.LUMBERJACK.bodyRadius+GameConstants.LUMBERJACK_STRIKE_RADIUS, enemy);
+                RobotInfo[] robots = rc.senseNearbyRobots(RobotType.LUMBERJACK.bodyRadius + GameConstants.LUMBERJACK_STRIKE_RADIUS, enemy);
 
-                if(robots.length > 0 && !rc.hasAttacked()) {
+                if (robots.length > 0 && !rc.hasAttacked()) {
                     // Use strike() to hit all nearby robots!
                     rc.strike();
                 } else {
                     // No close robots, so search for robots within sight radius
-                    robots = rc.senseNearbyRobots(-1,enemy);
+                    robots = rc.senseNearbyRobots(-1, enemy);
 
                     // If there is a robot, move towards it
-                    if(robots.length > 0) {
+                    if (robots.length > 0) {
                         MapLocation myLocation = rc.getLocation();
                         MapLocation enemyLocation = robots[0].getLocation();
                         Direction toEnemy = myLocation.directionTo(enemyLocation);
 
-                        tryMove(toEnemy);
                     } else {
                         // Move Randomly
-                        tryMove(randomDirection());
+                        common.tryMove(rc, common.randomDirection());
                     }
                 }
 
@@ -217,68 +173,10 @@ public strictfp class RobotPlayer {
         }
     }
 
-    /**
-     * Returns a random Direction
-     * @return a random Direction
-     */
-    static Direction randomDirection() {
-        return new Direction((float)Math.random() * 2 * (float)Math.PI);
-    }
-
-    /**
-     * Attempts to move in a given direction, while avoiding small obstacles directly in the path.
-     *
-     * @param dir The intended direction of movement
-     * @return true if a move was performed
-     * @throws GameActionException
-     */
-    static boolean tryMove(Direction dir) throws GameActionException {
-        return tryMove(dir,20,3);
-    }
-
-    /**
-     * Attempts to move in a given direction, while avoiding small obstacles direction in the path.
-     *
-     * @param dir The intended direction of movement
-     * @param degreeOffset Spacing between checked directions (degrees)
-     * @param checksPerSide Number of extra directions checked on each side, if intended direction was unavailable
-     * @return true if a move was performed
-     * @throws GameActionException
-     */
-    static boolean tryMove(Direction dir, float degreeOffset, int checksPerSide) throws GameActionException {
-
-        // First, try intended direction
-        if (!rc.hasMoved() && rc.canMove(dir)) {
-            System.out.println("rc.canMove in tryMove... ");
-            rc.move(dir);
-            return true;
-        }
-
-        // Now try a bunch of similar angles
-        boolean moved = false;
-        int currentCheck = 1;
-
-        while(currentCheck<=checksPerSide) {
-            // Try the offset of the left side
-            if(!rc.hasMoved() && rc.canMove(dir.rotateLeftDegrees(degreeOffset*currentCheck))) {
-                rc.move(dir.rotateLeftDegrees(degreeOffset*currentCheck));
-                return true;
-            }
-            // Try the offset on the right side
-            if(!rc.hasMoved() && rc.canMove(dir.rotateRightDegrees(degreeOffset*currentCheck))) {
-                rc.move(dir.rotateRightDegrees(degreeOffset*currentCheck));
-                return true;
-            }
-            // No move performed, try slightly further
-            currentCheck++;
-        }
-
-        // A move never happened, so return false.
-        return false;
-    }
 
     /**
      * Attempts to move the robot continuously in a rectangle (anticlockwise direction)
+     *
      * @return true if a move was performed
      * @throws GameActionException
      */
@@ -286,20 +184,17 @@ public strictfp class RobotPlayer {
     static boolean tryMoveInARectangle() throws GameActionException {
         //System.out.println("ARCHON_DIRECTION: " + ARCHON_DIRECTION);
         if (ARCHON_DIRECTION == 1) {
-                if (canMoveNWSE(Direction.getNorth(), Direction.getWest(), 2)) return true;
-            }
-            else if (ARCHON_DIRECTION == 2) {
-                if (canMoveNWSE(Direction.getWest(), Direction.getSouth(), 3)) return true;
-            }
-            else if (ARCHON_DIRECTION == 3) {
-                if (canMoveNWSE(Direction.getSouth(), Direction.getEast(), 4)) return true;
-            }
-            else {
-                if (canMoveNWSE(Direction.getEast(), Direction.getNorth(), 1)) return true;
-            }
+            if (canMoveNWSE(Direction.getNorth(), Direction.getWest(), 2)) return true;
+        } else if (ARCHON_DIRECTION == 2) {
+            if (canMoveNWSE(Direction.getWest(), Direction.getSouth(), 3)) return true;
+        } else if (ARCHON_DIRECTION == 3) {
+            if (canMoveNWSE(Direction.getSouth(), Direction.getEast(), 4)) return true;
+        } else {
+            if (canMoveNWSE(Direction.getEast(), Direction.getNorth(), 1)) return true;
+        }
         //System.out.println("Returning false...");
         return false;
-        }
+    }
 
     /**
      * Helper method to move in NWSE method (anticlockwise direction)
@@ -311,8 +206,7 @@ public strictfp class RobotPlayer {
         if (!rc.hasMoved() && rc.canMove(currDir)) {
             rc.move(currDir);
             return true;
-        }
-        else {
+        } else {
             if (!rc.hasMoved() && rc.canMove(newDir)) {
                 rc.move(newDir);
                 ARCHON_DIRECTION = newDirCode;
@@ -354,7 +248,7 @@ public strictfp class RobotPlayer {
         float theta = propagationDirection.radiansBetween(directionToRobot);
 
         // If theta > 90 degrees, then the bullet is traveling away from us and we can break early
-        if (Math.abs(theta) > Math.PI/2) {
+        if (Math.abs(theta) > Math.PI / 2) {
             return false;
         }
 
@@ -362,14 +256,14 @@ public strictfp class RobotPlayer {
         // This is the distance of a line that goes from myLocation and intersects perpendicularly with propagationDirection.
         // This corresponds to the smallest radius circle centered at our location that would intersect with the
         // line that is the path of the bullet.
-        float perpendicularDist = (float)Math.abs(distToRobot * Math.sin(theta)); // soh cah toa :)
+        float perpendicularDist = (float) Math.abs(distToRobot * Math.sin(theta)); // soh cah toa :)
 
         return (perpendicularDist <= rc.getType().bodyRadius);
     }
 
     public static void wander() throws GameActionException {
         try {
-            Direction dir = randomDirection();
+            Direction dir = common.randomDirection();
             if (rc.canMove(dir)) {
                 rc.move(dir);
             }
@@ -381,10 +275,10 @@ public strictfp class RobotPlayer {
     public static void checkNearbyBulletsBeforeMoving() throws GameActionException {
         try {
             BulletInfo[] bulletArray = rc.senseNearbyBullets();
-            Direction dir = randomDirection();
+            Direction dir = common.randomDirection();
             for (BulletInfo b : bulletArray) {
                 if (b.getDir().equals(dir))
-                    dir = randomDirection();
+                    dir = common.randomDirection();
             }
 
             if (rc.canMove(dir)) {
@@ -403,7 +297,7 @@ public strictfp class RobotPlayer {
             // if the number has increased by a certain amount (?)
             // then donate (how much ?)
             int prev_bullets = rc.readBroadcast(BULLET_CHANNEL);
-            int current_bullets = (int)rc.getTeamBullets();
+            int current_bullets = (int) rc.getTeamBullets();
             rc.broadcast(BULLET_CHANNEL, current_bullets);
 
             // if number of bullets increase by 10%, then donate
@@ -412,7 +306,7 @@ public strictfp class RobotPlayer {
             System.out.println("percentageIncrease: " + percentageIncrease);
 
             if (percentageIncrease > 10.0) {
-                rc.donate(current_bullets-prev_bullets);
+                rc.donate(current_bullets - prev_bullets);
                 System.out.println("VP: " + rc.getTeamVictoryPoints());
             }
 
