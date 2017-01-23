@@ -7,6 +7,8 @@ import battlecode.common.*;
  */
 public class common {
 
+    static int ARCHON_DIRECTION = 1;
+
     /**
      * Attempts to move in a given direction, while avoiding small obstacles directly in the path.
      *
@@ -105,7 +107,8 @@ public class common {
         }
         return false;
     }
-    \    /**
+
+     /**
      * Helper method to return Archon's current position by checking value of ARCHON_DIRECTION
      *
      * @throws GameActionException
