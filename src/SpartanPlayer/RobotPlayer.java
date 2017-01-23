@@ -4,6 +4,10 @@ import battlecode.common.*;
 public strictfp class RobotPlayer {
     static RobotController rc;
 
+    static int BULLET_CHANNEL = 100;
+    static int ARCHON_X = 0;
+    static int ARCHON_Y = 0;
+
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
      * If this method returns, the robot dies!
@@ -35,31 +39,29 @@ public strictfp class RobotPlayer {
 
     static void runArchon() throws GameActionException {
         System.out.println("I'm an archon!");
-
-        // The code you want your robot to perform every round should be in this loop
+        int stridesSinceLastGardenerCreate = 10;
         while (true) {
 
-            // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
-
-                // Generate a random direction
-                Direction dir = randomDirection();
+                Direction dir = common.randomDirection();
 
                 // Randomly attempt to build a gardener in this direction
-                if (rc.canHireGardener(dir) && Math.random() < .01) {
+                if (stridesSinceLastGardenerCreate > 30 && rc.canHireGardener(dir) && Math.random() < .2) {
                     rc.hireGardener(dir);
+                    stridesSinceLastGardenerCreate = 0;
+                } else {
+                    stridesSinceLastGardenerCreate++;
                 }
 
-                // Move randomly
-                tryMove(randomDirection());
+                common.tryMoveInARectangle(rc);
 
-                // Broadcast archon's location for other robots on the team to know
                 MapLocation myLocation = rc.getLocation();
-                rc.broadcast(0,(int)myLocation.x);
-                rc.broadcast(1,(int)myLocation.y);
+                rc.broadcast(ARCHON_X, (int) myLocation.x);
+                rc.broadcast(ARCHON_Y, (int) myLocation.y);
 
                 // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
+
 
             } catch (Exception e) {
                 System.out.println("Archon Exception");
@@ -70,32 +72,14 @@ public strictfp class RobotPlayer {
 
 	static void runGardener() throws GameActionException {
         System.out.println("I'm a gardener!");
-
+        Gardener me = new Gardener(rc);
         // The code you want your robot to perform every round should be in this loop
         while (true) {
 
-            // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
 
-                // Listen for home archon's location
-                int xPos = rc.readBroadcast(0);
-                int yPos = rc.readBroadcast(1);
-                MapLocation archonLoc = new MapLocation(xPos,yPos);
+                me.orchestrate();
 
-                // Generate a random direction
-                Direction dir = randomDirection();
-
-                // Randomly attempt to build a soldier or lumberjack in this direction
-                if (rc.canBuildRobot(RobotType.SOLDIER, dir) && Math.random() < .01) {
-                    rc.buildRobot(RobotType.SOLDIER, dir);
-                } else if (rc.canBuildRobot(RobotType.LUMBERJACK, dir) && Math.random() < .01 && rc.isBuildReady()) {
-                    rc.buildRobot(RobotType.LUMBERJACK, dir);
-                }
-
-                // Move randomly
-                tryMove(randomDirection());
-
-                // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
                 Clock.yield();
 
             } catch (Exception e) {

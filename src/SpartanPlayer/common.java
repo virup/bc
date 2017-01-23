@@ -1,4 +1,4 @@
-package rahul_player1;
+package SpartanPlayer;
 
 import battlecode.common.*;
 
@@ -65,5 +65,56 @@ public class common {
      */
     static Direction randomDirection() {
         return new Direction((float)Math.random() * 2 * (float)Math.PI);
+    }
+
+    /**
+     * Attempts to move the robot continuously in a rectangle (anticlockwise direction)
+     *
+     * @return true if a move was performed
+     * @throws GameActionException
+     */
+    static boolean tryMoveInARectangle(RobotController rc) throws GameActionException {
+        if (ARCHON_DIRECTION == 1) {
+            if (canMoveNWSE(rc, Direction.getNorth(), Direction.getWest(), 2)) return true;
+        } else if (ARCHON_DIRECTION == 2) {
+            if (canMoveNWSE(rc, Direction.getWest(), Direction.getSouth(), 3)) return true;
+        } else if (ARCHON_DIRECTION == 3) {
+            if (canMoveNWSE(rc, Direction.getSouth(), Direction.getEast(), 4)) return true;
+        } else {
+            if (canMoveNWSE(rc, Direction.getEast(), Direction.getNorth(), 1)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Helper method to move in NWSE method (anticlockwise direction)
+     *
+     * @throws GameActionException
+     */
+
+    static boolean canMoveNWSE(RobotController rc, Direction currDir, Direction newDir, int newDirCode) throws GameActionException {
+        if (!rc.hasMoved() && rc.canMove(currDir)) {
+            rc.move(currDir);
+            return true;
+        } else {
+            if (!rc.hasMoved() && rc.canMove(newDir)) {
+                rc.move(newDir);
+                ARCHON_DIRECTION = newDirCode;
+                return true;
+            }
+        }
+        return false;
+    }
+    \    /**
+     * Helper method to return Archon's current position by checking value of ARCHON_DIRECTION
+     *
+     * @throws GameActionException
+     */
+
+    static Direction getArchonDirection() throws GameActionException {
+        if (ARCHON_DIRECTION == 1) return Direction.getNorth();
+        else if (ARCHON_DIRECTION == 2) return Direction.getWest();
+        else if (ARCHON_DIRECTION == 3) return Direction.getSouth();
+        else return Direction.getEast();
     }
 }

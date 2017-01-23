@@ -1,4 +1,4 @@
-package rahul_player1;
+package SpartanPlayer;
 
 import battlecode.common.*;
 

@@ -39,62 +39,6 @@ public strictfp class RobotPlayer {
         }
     }
 
-    static void runArchon() throws GameActionException {
-        System.out.println("I'm an archon!");
-        int stridesSinceLastGardenerCreate = 10;
-        // The code you want your robot to perform every round should be in this loop
-        while (true) {
-
-            // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
-            try {
-                //Generate a random direction
-                Direction dir = common.randomDirection();
-
-                // Randomly attempt to build a gardener in this direction
-                if (stridesSinceLastGardenerCreate > 30 && rc.canHireGardener(dir) && Math.random() < .2) {
-                    rc.hireGardener(dir);
-                    stridesSinceLastGardenerCreate = 0;
-                } else {
-                    stridesSinceLastGardenerCreate++;
-                }
-
-
-                tryMoveInARectangle();
-
-                MapLocation myLocation = rc.getLocation();
-                rc.broadcast(ARCHON_X, (int) myLocation.x);
-                rc.broadcast(ARCHON_Y, (int) myLocation.y);
-
-                // Clock.yield() makes the robot wait until the next turn, then it will perform this loop again
-                Clock.yield();
-
-
-            } catch (Exception e) {
-                System.out.println("Archon Exception");
-                e.printStackTrace();
-            }
-        }
-    }
-
-    static void runGardener() throws GameActionException {
-        System.out.println("I'm a gardener!");
-        Gardener me = new Gardener(rc);
-        // The code you want your robot to perform every round should be in this loop
-        while (true) {
-
-            try {
-
-                me.orchestrate();
-
-                Clock.yield();
-
-            } catch (Exception e) {
-                System.out.println("Gardener Exception");
-                e.printStackTrace();
-            }
-        }
-    }
-
     static void runSoldier() throws GameActionException {
         System.out.println("I'm an soldier!");
         Team enemy = rc.getTeam().opponent();
@@ -174,60 +118,9 @@ public strictfp class RobotPlayer {
     }
 
 
-    /**
-     * Attempts to move the robot continuously in a rectangle (anticlockwise direction)
-     *
-     * @return true if a move was performed
-     * @throws GameActionException
-     */
 
-    static boolean tryMoveInARectangle() throws GameActionException {
-        //System.out.println("ARCHON_DIRECTION: " + ARCHON_DIRECTION);
-        if (ARCHON_DIRECTION == 1) {
-            if (canMoveNWSE(Direction.getNorth(), Direction.getWest(), 2)) return true;
-        } else if (ARCHON_DIRECTION == 2) {
-            if (canMoveNWSE(Direction.getWest(), Direction.getSouth(), 3)) return true;
-        } else if (ARCHON_DIRECTION == 3) {
-            if (canMoveNWSE(Direction.getSouth(), Direction.getEast(), 4)) return true;
-        } else {
-            if (canMoveNWSE(Direction.getEast(), Direction.getNorth(), 1)) return true;
-        }
-        //System.out.println("Returning false...");
-        return false;
-    }
 
-    /**
-     * Helper method to move in NWSE method (anticlockwise direction)
-     *
-     * @throws GameActionException
-     */
 
-    static boolean canMoveNWSE(Direction currDir, Direction newDir, int newDirCode) throws GameActionException {
-        if (!rc.hasMoved() && rc.canMove(currDir)) {
-            rc.move(currDir);
-            return true;
-        } else {
-            if (!rc.hasMoved() && rc.canMove(newDir)) {
-                rc.move(newDir);
-                ARCHON_DIRECTION = newDirCode;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Helper method to return Archon's current position by checking value of ARCHON_DIRECTION
-     *
-     * @throws GameActionException
-     */
-
-    static Direction getArchonDirection() throws GameActionException {
-        if (ARCHON_DIRECTION == 1) return Direction.getNorth();
-        else if (ARCHON_DIRECTION == 2) return Direction.getWest();
-        else if (ARCHON_DIRECTION == 3) return Direction.getSouth();
-        else return Direction.getEast();
-    }
 
     /**
      * A slightly more complicated example function, this returns true if the given bullet is on a collision
